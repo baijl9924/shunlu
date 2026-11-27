@@ -37,7 +37,7 @@ const client = apiKey
     })
   : null;
 
-const VL_MODEL = process.env.QWEN_VL_MODEL || 'qwen-vl-max';
+const VL_MODEL = process.env.QWEN_VL_MODEL || 'qwen3-vl-plus';
 const TEXT_MODEL = process.env.QWEN_TEXT_MODEL || 'qwen-plus';
 
 const ANALYZE_PROMPT = `你是“顺路”无障碍环境体检助手。用户在街头随手拍了一张照片，请判断并以 JSON 返回（只输出 JSON，不要任何其他文字）：

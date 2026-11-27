@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 *.log
+*.apk
 server/data/
 server/uploads/
 web/android/
