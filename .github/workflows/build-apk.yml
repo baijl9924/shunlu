@@ -115,14 +115,47 @@ jobs:
             })();
           '
 
-      - name: Build Debug APK
+      # 正式签名：配置了 ANDROID_KEYSTORE_BASE64 等 secrets 时打 release 包（固定签名，可覆盖升级、不可调试）；
+      # 未配置时回退为 debug 包（每次构建签名不同，用户需卸载旧版才能安装）
+      - name: Build APK (release-signed when keystore secrets exist)
         working-directory: web/android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SHUNLU_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SHUNLU_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SHUNLU_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Copy APK
-        run: cp web/android/app/build/outputs/apk/debug/app-debug.apk shunlu.apk
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/shunlu-release.jks"
+            export SHUNLU_KEYSTORE_PATH="$RUNNER_TEMP/shunlu-release.jks"
+            node -e '
+              const fs = require("fs");
+              const gp = "app/build.gradle";
+              let g = fs.readFileSync(gp, "utf8");
+              const signing = `
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv("SHUNLU_KEYSTORE_PATH"))
+                      storePassword System.getenv("SHUNLU_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("SHUNLU_KEY_ALIAS")
+                      keyPassword System.getenv("SHUNLU_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {`;
+              if (!/buildTypes\s*\{/.test(g) || !/release\s*\{/.test(g)) throw new Error("build.gradle 结构不符合预期");
+              g = g.replace(/buildTypes\s*\{/, signing.trim());
+              g = g.replace(/(buildTypes\s*\{\s*release\s*\{)/, "$1\n            signingConfig signingConfigs.release");
+              fs.writeFileSync(gp, g);
+            '
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../../shunlu.apk
+            rm -f "$RUNNER_TEMP/shunlu-release.jks"
+          else
+            echo "::warning::未配置 ANDROID_KEYSTORE_* secrets，回退为 debug 签名（每次构建签名不同，无法覆盖升级）"
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../../shunlu.apk
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
