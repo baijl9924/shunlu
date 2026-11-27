@@ -1,12 +1,14 @@
 import { Camera, FileBarChart2, Map, Trophy, User } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { appHomePath } from '../App';
 
 const item = 'group flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium min-h-14 transition-colors duration-200 active:scale-95';
 
 export default function BottomNav() {
   const nav = useNavigate();
   const [lifting, setLifting] = useState(false);
+  const home = appHomePath();
 
   const cls = ({ isActive }: { isActive: boolean }) => `${item} ${isActive ? 'text-brand' : 'text-slate-400'}`;
 
@@ -20,7 +22,7 @@ export default function BottomNav() {
 
   return (
     <nav className="no-print safe-bottom relative z-30 flex border-t border-slate-200/80 bg-white/95 backdrop-blur-md [--sb-pad:4px]" aria-label="主导航">
-      <NavLink to="/" end className={cls}>
+      <NavLink to={home} end className={cls}>
         {({ isActive }) => (
           <>
             <span className={`grid h-7 w-12 place-items-center rounded-full transition-all duration-200 ${isActive ? 'bg-brand-soft text-brand' : ''}`}>

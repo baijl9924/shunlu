@@ -5,6 +5,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import MapView from '../components/MapView';
 import MosaicEditor, { type MosaicHandle } from '../components/MosaicEditor';
 import { api, assetUrl, SEVERITY_TEXT } from '../lib/api';
+import { appHomePath } from '../App';
 import { DEFAULT_CENTER, locate } from '../lib/geo';
 import { compressImage } from '../lib/image';
 import { useApp } from '../lib/store';
@@ -98,7 +99,7 @@ export default function Capture() {
     }
   }
 
-  const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'));
+  const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav(appHomePath()));
 
   return (
     <div className="safe-bottom min-h-full bg-surface [--sb-pad:7rem]">

@@ -5,6 +5,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import { StatusBadge } from '../components/IssueCard';
 import ReportTextCard from '../components/ReportTextCard';
 import { api, assetUrl, SEVERITY_TEXT, timeAgo, type IssueDetail } from '../lib/api';
+import { appHomePath } from '../App';
 import { compressImage } from '../lib/image';
 import { useApp } from '../lib/store';
 
@@ -69,7 +70,7 @@ export default function IssuePage() {
     return (
       <div className="safe-top p-10 text-center text-slate-500">
         <p>{error}</p>
-        <button onClick={() => nav('/')} className="mt-4 font-medium text-brand">
+        <button onClick={() => nav(appHomePath())} className="mt-4 font-medium text-brand">
           返回地图
         </button>
       </div>
@@ -82,7 +83,7 @@ export default function IssuePage() {
   return (
     <div className="safe-bottom min-h-full bg-surface [--sb-pad:2.5rem]">
       <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 pb-2 backdrop-blur-md [--st-pad:0.5rem]">
-        <button onClick={() => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'))} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 active:bg-slate-100" aria-label="返回">
+        <button onClick={() => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav(appHomePath()))} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 active:bg-slate-100" aria-label="返回">
           <ChevronLeft className="h-6 w-6" />
         </button>
         <h1 className="text-[17px] font-semibold text-slate-900">问题详情</h1>

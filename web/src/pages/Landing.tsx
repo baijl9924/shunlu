@@ -40,10 +40,11 @@ export default function Landing() {
       .catch(() => {});
 
     const origin = location.origin;
+    const h5Url = location.hostname.endsWith('shunlu.cc.cd') ? 'https://app.shunlu.cc.cd/' : `${origin}/app`;
     QRCode.toDataURL(`${origin}${APK_URL}`, { margin: 1, width: 180, color: { dark: '#0f172a', light: '#ffffff' } })
       .then(setQrApk)
       .catch(() => {});
-    QRCode.toDataURL(`${origin}/`, { margin: 1, width: 180, color: { dark: '#1677ff', light: '#ffffff' } })
+    QRCode.toDataURL(h5Url, { margin: 1, width: 180, color: { dark: '#1677ff', light: '#ffffff' } })
       .then(setQrWeb)
       .catch(() => {});
   }, []);
@@ -88,7 +89,7 @@ export default function Landing() {
               下载 APK
             </a>
             <Link
-              to="/"
+              to="/app"
               className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand/25 transition hover:bg-brand-dark"
             >
               在线体验
@@ -134,7 +135,7 @@ export default function Landing() {
               </a>
 
               <Link
-                to="/"
+                to="/app"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-800 shadow-xs transition hover:border-brand/40 hover:text-brand active:scale-[0.98]"
               >
                 <Globe className="h-5 w-5 text-brand" />
@@ -196,7 +197,7 @@ export default function Landing() {
                       {stats ? `${stats.issues} 处记录 · ${stats.fixed} 处已整改` : '连接实时无障碍地图…'}
                     </p>
                   </div>
-                  <Link to="/" className="rounded-lg bg-brand px-2.5 py-1 text-[11px] font-semibold text-white">
+                  <Link to="/app" className="rounded-lg bg-brand px-2.5 py-1 text-[11px] font-semibold text-white">
                     进入
                   </Link>
                 </div>
@@ -338,7 +339,7 @@ export default function Landing() {
                   GitHub 备用下载
                 </a>
                 <Link
-                  to="/"
+                  to="/app"
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-5 py-3.5 text-[14px] font-semibold text-white backdrop-blur-xs transition hover:bg-white/20"
                 >
                   <MapPin className="h-4 w-4" />
@@ -376,7 +377,7 @@ export default function Landing() {
             <span>· 随手拍，让每条路都顺</span>
           </div>
           <div className="flex flex-wrap items-center gap-5">
-            <Link to="/" className="hover:text-brand">
+            <Link to="/app" className="hover:text-brand">
               无障碍地图
             </Link>
             <Link to="/report" className="hover:text-brand">
