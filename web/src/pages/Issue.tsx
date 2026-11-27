@@ -5,7 +5,8 @@ import { appHomePath } from '../App';
 import CategoryIcon from '../components/CategoryIcon';
 import { StatusBadge } from '../components/IssueCard';
 import ReportTextCard from '../components/ReportTextCard';
-import { api, assetUrl, SEVERITY_TEXT, timeAgo, type IssueDetail } from '../lib/api';
+import SpeakButton from '../components/SpeakButton';
+import { api, assetUrl, SEVERITY_TEXT, STATUS_TEXT, timeAgo, type IssueDetail } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { useApp } from '../lib/store';
 
@@ -136,12 +137,18 @@ export default function IssuePage() {
               {issue.nickname} · {timeAgo(issue.createdAt)}
             </span>
           </div>
-          <h2 className="mt-2.5 flex items-center gap-2 text-[19px] font-bold text-slate-900">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
-              <CategoryIcon category={issue.category} className="h-4 w-4" />
-            </span>
-            {issue.title}
-          </h2>
+          <div className="mt-2.5 flex items-center justify-between gap-2">
+            <h2 className="flex min-w-0 items-center gap-2 text-[19px] font-bold text-slate-900">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
+                <CategoryIcon category={issue.category} className="h-4 w-4" />
+              </span>
+              <span className="truncate">{issue.title}</span>
+            </h2>
+            <SpeakButton
+              className="shrink-0"
+              text={`无障碍路障提示：${issue.title}。状态：${STATUS_TEXT[issue.status]}，程度：${SEVERITY_TEXT[issue.severity]}。位置在${issue.address || '当前点位'}。现场说明：${issue.description}`}
+            />
+          </div>
           <p className="mt-2 text-[14px] leading-relaxed text-slate-600">{issue.description}</p>
           <a href={navUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-2 text-[13px] text-slate-700">
             <MapPin className="h-4 w-4 shrink-0 text-brand" />

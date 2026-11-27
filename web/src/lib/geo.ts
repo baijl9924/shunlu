@@ -46,3 +46,19 @@ export function locate(timeout = 10000): Promise<{ lat: number; lng: number; acc
 }
 
 export const DEFAULT_CENTER = { lat: 39.9087, lng: 116.3975 }; // 天安门
+
+/** 两点球面距离（米） */
+export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
+
+export function formatDistance(m: number): string {
+  if (m < 1000) return `${Math.max(10, Math.round(m / 10) * 10)}m`;
+  if (m < 100000) return `${(m / 1000).toFixed(1)}km`;
+  return `${Math.round(m / 1000)}km`;
+}

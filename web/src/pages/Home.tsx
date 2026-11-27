@@ -5,7 +5,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import IssueCard, { StatusBadge } from '../components/IssueCard';
 import MapView from '../components/MapView';
 import { api, assetUrl, STATUS_COLOR, STATUS_TEXT, type Issue } from '../lib/api';
-import { DEFAULT_CENTER } from '../lib/geo';
+import { DEFAULT_CENTER, distanceMeters } from '../lib/geo';
 import { useApp } from '../lib/store';
 
 type Stats = { issues: number; fixed: number; confirmations: number; cities: number; users: number };
@@ -15,6 +15,7 @@ export default function Home() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [category, setCategory] = useState('');
+  const [sortBy, setSortBy] = useState<'latest' | 'nearest'>('latest');
   const [view, setView] = useState<'map' | 'list'>('map');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [center, setCenter] = useState(() => {
@@ -47,7 +48,13 @@ export default function Home() {
     if (g) setCenter({ lat: g.lat, lng: g.lng });
   }
 
-  const shown = useMemo(() => (category ? issues.filter((i) => i.category === category) : issues), [issues, category]);
+  const shown = useMemo(() => {
+    const filtered = category ? issues.filter((i) => i.category === category) : issues;
+    if (sortBy === 'nearest' && userGeo) {
+      return [...filtered].sort((a, b) => distanceMeters(userGeo, a) - distanceMeters(userGeo, b));
+    }
+    return filtered;
+  }, [issues, category, sortBy, userGeo]);
   const selected = useMemo(() => shown.find((i) => i.id === selectedId) || null, [shown, selectedId]);
   const hasMap = !!config?.tmapKey;
   const effectiveView = hasMap ? view : 'list';
@@ -242,6 +249,28 @@ export default function Home() {
       </header>
 
       <div className="flex-1 space-y-2.5 p-4">
+        {shown.length > 0 && (
+          <div className="flex items-center justify-between px-0.5 text-[12px]">
+            <span className="text-slate-500">共 {shown.length} 处记录</span>
+            <div className="inline-flex rounded-full bg-slate-200/70 p-0.5 font-medium">
+              <button
+                onClick={() => setSortBy('latest')}
+                className={`rounded-full px-2.5 py-1 transition ${sortBy === 'latest' ? 'bg-white text-brand shadow-2xs' : 'text-slate-500'}`}
+              >
+                最新发布
+              </button>
+              <button
+                onClick={async () => {
+                  if (!userGeo) await locateMe();
+                  setSortBy('nearest');
+                }}
+                className={`rounded-full px-2.5 py-1 transition ${sortBy === 'nearest' ? 'bg-white text-brand shadow-2xs' : 'text-slate-500'}`}
+              >
+                离我最近
+              </button>
+            </div>
+          </div>
+        )}
         {shown.length === 0 && (
           <div className="flex flex-col items-center py-20 text-center">
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand">

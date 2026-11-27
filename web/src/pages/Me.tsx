@@ -28,7 +28,7 @@ const BADGE_ICON: Record<string, React.ComponentType<{ className?: string }>> = 
 };
 
 export default function Me() {
-  const { loggedIn, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile } = useApp();
+  const { loggedIn, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile, largeText, toggleLargeText } = useApp();
   const [me, setMe] = useState<MeData | null>(null);
   const [poster, setPoster] = useState(false);
   const [editName, setEditName] = useState(false);
@@ -217,6 +217,26 @@ export default function Me() {
           >
             保存资料
           </button>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-slate-900">无障碍大字关怀模式</h2>
+              <p className="mt-0.5 text-[12px] text-slate-500">放大全站文字与按钮尺寸，方便长辈和弱视朋友阅读</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={largeText}
+              onClick={() => (toggleLargeText(), toast(largeText ? '已恢复标准字号' : '已开启大字关怀模式'))}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${largeText ? 'bg-brand' : 'bg-slate-200'}`}
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-xs transition-transform duration-200 ${largeText ? 'translate-x-5' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">

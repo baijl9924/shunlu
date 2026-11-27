@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
 import { StatusBadge } from '../components/IssueCard';
 import ReportPoster from '../components/ReportPoster';
+import SpeakButton from '../components/SpeakButton';
 import { api, assetUrl, type Issue } from '../lib/api';
 import { useApp } from '../lib/store';
 
@@ -257,10 +258,16 @@ export default function Report() {
 
           {/* 现状摘要 */}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-            <h2 className="mb-2 flex items-center gap-1.5 text-[15px] font-semibold text-slate-900">
-              <FileText className="h-4 w-4 text-brand" />
-              现状摘要
-            </h2>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-slate-900">
+                <FileText className="h-4 w-4 text-brand" />
+                现状摘要
+              </h2>
+              <SpeakButton
+                label="听报告"
+                text={`${titleText}。当前无障碍健康度 ${health.score} 分，评级 ${health.grade}，共记录 ${data.total.n} 处问题，已整改 ${data.total.fixed || 0} 处。${data.summary}`}
+              />
+            </div>
             <p className="rounded-xl bg-brand-soft/65 p-3.5 text-[14px] leading-relaxed text-slate-700">{parsed.overview || data.summary}</p>
           </section>
 
