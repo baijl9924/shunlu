@@ -26,13 +26,18 @@ export default function Rank() {
     <div className="min-h-full bg-surface pb-10">
       <header className="safe-top sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 pb-3 pt-3 backdrop-blur-md">
         <h1 className="text-[20px] font-bold tracking-tight text-slate-900">排行榜</h1>
-        <div className="mt-3 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist">
+        <div className="relative mt-3 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
+            style={{ transform: tab === 'users' ? 'translateX(0%)' : 'translateX(100%)' }}
+          />
           <button
             role="tab"
             aria-selected={tab === 'users'}
             onClick={() => setTab('users')}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-[14px] font-medium transition ${
-              tab === 'users' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'
+            className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-[14px] font-medium transition-colors duration-200 ${
+              tab === 'users' ? 'text-brand' : 'text-slate-500'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -42,8 +47,8 @@ export default function Rank() {
             role="tab"
             aria-selected={tab === 'cities'}
             onClick={() => setTab('cities')}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-[14px] font-medium transition ${
-              tab === 'cities' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'
+            className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-[14px] font-medium transition-colors duration-200 ${
+              tab === 'cities' ? 'text-brand' : 'text-slate-500'
             }`}
           >
             <Building2 className="h-4 w-4" />

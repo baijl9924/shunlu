@@ -53,9 +53,11 @@ export default function App() {
     };
   }, []);
 
+  const isCapture = loc.pathname.startsWith('/capture');
+
   return (
     <div className={isAdmin ? 'safe-top min-h-full bg-surface' : 'mx-auto flex h-full max-w-md flex-col bg-surface shadow-xl'}>
-      <main className={isAdmin ? '' : 'relative flex-1 overflow-y-auto'}>
+      <main key={loc.pathname} className={`${isAdmin ? '' : 'relative flex-1 overflow-y-auto'} ${isCapture ? 'capture-enter' : loc.pathname !== '/' ? 'page-enter' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/capture" element={<Capture />} />

@@ -46,6 +46,64 @@ body {
   display: none;
 }
 
+/* 页面切换丝滑入场 */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.page-enter {
+  animation: pageEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 随手拍页面从底部丝滑上划展开 */
+@keyframes captureRise {
+  from {
+    opacity: 0.35;
+    transform: translateY(28%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.capture-enter {
+  animation: captureRise 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 底部浮层 / 弹窗丝滑上划 */
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sheet-up {
+  animation: sheetUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 照片检测：丝滑绿线扫描 */
+@keyframes scanSweep {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(200%);
+  }
+}
+.scan-beam {
+  animation: scanSweep 1.8s ease-in-out infinite alternate;
+}
+
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }

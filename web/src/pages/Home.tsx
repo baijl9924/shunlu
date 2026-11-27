@@ -84,12 +84,17 @@ export default function Home() {
                 </p>
               )}
             </div>
-            <div className="flex rounded-xl bg-slate-100 p-0.5 text-[12px]" role="tablist" aria-label="视图切换">
+            <div className="relative grid grid-cols-2 rounded-xl bg-slate-100 p-0.5 text-[12px]" role="tablist" aria-label="视图切换">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
+                style={{ transform: view === 'map' ? 'translateX(0%)' : 'translateX(100%)' }}
+              />
               <button
                 role="tab"
                 aria-selected={view === 'map'}
                 onClick={() => setView('map')}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition ${view === 'map' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'}`}
+                className={`relative z-10 flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition-colors duration-200 ${view === 'map' ? 'text-brand' : 'text-slate-500'}`}
               >
                 <MapIcon className="h-3.5 w-3.5" />
                 地图
@@ -98,7 +103,7 @@ export default function Home() {
                 role="tab"
                 aria-selected={view === 'list'}
                 onClick={() => setView('list')}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition ${view === 'list' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'}`}
+                className={`relative z-10 flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition-colors duration-200 ${view === 'list' ? 'text-brand' : 'text-slate-500'}`}
               >
                 <List className="h-3.5 w-3.5" />
                 列表
@@ -145,7 +150,7 @@ export default function Home() {
 
         {/* 选中地图点位后的底部预览卡片 */}
         {selected && (
-          <div className="absolute inset-x-3.5 bottom-4 z-20 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-900/5">
+          <div className="sheet-up absolute inset-x-3.5 bottom-4 z-20 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-900/5">
             <button
               onClick={() => setSelectedId(null)}
               className="absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-slate-500"
@@ -196,12 +201,17 @@ export default function Home() {
             </div>
           </div>
           {hasMap && (
-            <div className="flex rounded-xl bg-slate-100 p-0.5 text-[12px]" role="tablist">
+            <div className="relative grid grid-cols-2 rounded-xl bg-slate-100 p-0.5 text-[12px]" role="tablist">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
+                style={{ transform: view === 'map' ? 'translateX(0%)' : 'translateX(100%)' }}
+              />
               <button
                 role="tab"
                 aria-selected={view === 'map'}
                 onClick={() => setView('map')}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-medium ${view === 'map' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'}`}
+                className={`relative z-10 flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition-colors duration-200 ${view === 'map' ? 'text-brand' : 'text-slate-500'}`}
               >
                 <MapIcon className="h-3.5 w-3.5" />
                 地图
@@ -210,7 +220,7 @@ export default function Home() {
                 role="tab"
                 aria-selected={view === 'list'}
                 onClick={() => setView('list')}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-medium ${view === 'list' ? 'bg-white text-brand shadow-xs' : 'text-slate-500'}`}
+                className={`relative z-10 flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 font-medium transition-colors duration-200 ${view === 'list' ? 'text-brand' : 'text-slate-500'}`}
               >
                 <List className="h-3.5 w-3.5" />
                 列表
@@ -258,7 +268,7 @@ function Chip({ active, onClick, floating, children }: { active: boolean; onClic
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-200 active:scale-95 ${
         active
           ? 'bg-brand text-white shadow-sm'
           : floating

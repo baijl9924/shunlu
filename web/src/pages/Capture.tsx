@@ -1,4 +1,4 @@
-import { AlertCircle, Camera, CheckCircle2, ChevronLeft, FileText, Image as ImageIcon, Loader2, MapPin, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, ChevronLeft, FileText, Image as ImageIcon, Loader2, LocateFixed, MapPin, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
@@ -16,7 +16,7 @@ type Pos = { lat: number; lng: number };
 const HINTS = ['盲道被占用', '缺少坡道或坡道损坏', '台阶没有扶手', '无障碍电梯故障', '无障碍停车位被占'];
 
 export default function Capture() {
-  const { config, userGeo, toast } = useApp();
+  const { config, userGeo, refreshGeo, toast } = useApp();
   const nav = useNavigate();
   const [step, setStep] = useState<Step>('pick');
   const [preview, setPreview] = useState('');
@@ -103,7 +103,7 @@ export default function Capture() {
   return (
     <div className="min-h-full bg-surface pb-28">
       <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 py-2 backdrop-blur-md">
-        <button onClick={goBack} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 active:bg-slate-100" aria-label="返回">
+        <button onClick={goBack} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 transition active:scale-90 active:bg-slate-100" aria-label="返回">
           <ChevronLeft className="h-6 w-6" />
         </button>
         <h1 className="text-[17px] font-semibold text-slate-900">记录路障</h1>
@@ -118,47 +118,83 @@ export default function Capture() {
 
       {step === 'pick' && (
         <div className="p-4">
-          {/* 取景框风格拍照主区域 */}
-          <div className="relative flex aspect-[4/5] max-h-[58vh] w-full flex-col items-center justify-between overflow-hidden rounded-3xl bg-slate-900 p-6 text-white shadow-lg">
+          {/* 仿原生相机取景框 + 底部对称快门栏 */}
+          <div className="relative flex aspect-[4/5] max-h-[60vh] w-full flex-col justify-between overflow-hidden rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(22,119,255,0.22),transparent_68%)]" />
-            {/* 四角取景框线 */}
-            <span className="pointer-events-none absolute left-5 top-5 h-6 w-6 rounded-tl-lg border-l-2 border-t-2 border-white/40" />
-            <span className="pointer-events-none absolute right-5 top-5 h-6 w-6 rounded-tr-lg border-r-2 border-t-2 border-white/40" />
-            <span className="pointer-events-none absolute bottom-5 left-5 h-6 w-6 rounded-bl-lg border-b-2 border-l-2 border-white/40" />
-            <span className="pointer-events-none absolute bottom-5 right-5 h-6 w-6 rounded-br-lg border-b-2 border-r-2 border-white/40" />
 
-            <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] text-white/85 backdrop-blur-sm">
-              <ShieldCheck className="h-3.5 w-3.5 text-sky-300" />
-              自动识别问题并打码人脸、车牌
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center text-center">
-              <button
-                onClick={() => cameraInput.current?.click()}
-                className="grid h-20 w-20 place-items-center rounded-full bg-white text-slate-900 shadow-xl ring-8 ring-white/20 transition active:scale-95"
-                aria-label="打开相机拍照"
-              >
-                <Camera className="h-8 w-8" strokeWidth={2} />
-              </button>
-              <p className="mt-5 text-[18px] font-semibold">拍下现场照片</p>
-              <p className="mt-1 text-[13px] text-white/65">尽量拍到路障和周围环境，方便核实位置</p>
-            </div>
-
-            <div className="relative z-10 flex w-full items-center justify-between gap-2 pt-2">
-              <button
-                onClick={() => albumInput.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-4 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition active:bg-white/20"
-              >
-                <ImageIcon className="h-4 w-4" />
-                从相册选取
-              </button>
-              <span className="truncate text-[12px] text-white/60">
-                {geo.address || (locError ? '位置待手动调整' : pos ? '当前位置就绪' : '正在定位…')}
+            {/* 顶部隐私提示胶囊 */}
+            <div className="relative z-10 flex justify-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] text-white/85 backdrop-blur-sm">
+                <ShieldCheck className="h-3.5 w-3.5 text-sky-300" />
+                自动识别问题并打码人脸、车牌
               </span>
+            </div>
+
+            {/* 中央独立取景框（与底部按钮完全分离，互不重叠） */}
+            <div className="relative z-10 mx-2 my-4 flex flex-1 flex-col items-center justify-center text-center">
+              <span className="pointer-events-none absolute left-0 top-0 h-5 w-5 rounded-tl-md border-l-2 border-t-2 border-white/45" />
+              <span className="pointer-events-none absolute right-0 top-0 h-5 w-5 rounded-tr-md border-r-2 border-t-2 border-white/45" />
+              <span className="pointer-events-none absolute bottom-0 left-0 h-5 w-5 rounded-bl-md border-b-2 border-l-2 border-white/45" />
+              <span className="pointer-events-none absolute bottom-0 right-0 h-5 w-5 rounded-br-md border-b-2 border-r-2 border-white/45" />
+              <p className="text-[19px] font-semibold tracking-tight">对准路障拍一张</p>
+              <p className="mt-1.5 max-w-[230px] text-[13px] leading-relaxed text-white/60">尽量让障碍物和周边路面同时入镜，方便定位核实</p>
+              {geo.address && (
+                <p className="mt-3 max-w-[260px] truncate rounded-full bg-black/25 px-3 py-1 text-[11px] text-white/70">
+                  {geo.address}
+                </p>
+              )}
+            </div>
+
+            {/* 底部原生相机对称快门栏：左相册 · 中快门 · 右定位 */}
+            <div className="relative z-10 grid grid-cols-3 items-center pt-1">
+              <div className="flex justify-center">
+                <button
+                  onClick={() => albumInput.current?.click()}
+                  className="flex flex-col items-center gap-1.5 transition active:scale-90"
+                  aria-label="从相册选取照片"
+                >
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/12 ring-1 ring-white/15 backdrop-blur-sm">
+                    <ImageIcon className="h-5 w-5 text-white" />
+                  </span>
+                  <span className="text-[11px] text-white/75">相册</span>
+                </button>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={() => cameraInput.current?.click()}
+                  className="grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/85 p-1.5 shadow-xl transition duration-150 active:scale-90"
+                  aria-label="打开相机拍照"
+                >
+                  <span className="grid h-full w-full place-items-center rounded-full bg-white text-slate-900">
+                    <Camera className="h-7 w-7" strokeWidth={2.1} />
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={async () => {
+                    const g = await refreshGeo(false);
+                    if (g) {
+                      setPos({ lat: g.lat, lng: g.lng });
+                      setGeo({ address: g.address, city: g.city, district: g.district });
+                      toast(g.city ? `已更新位置：${g.city}${g.district}` : '位置已更新');
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1.5 transition active:scale-90"
+                  aria-label="刷新当前位置"
+                >
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/10 backdrop-blur-sm">
+                    <LocateFixed className={`h-5 w-5 ${pos && !locError ? 'text-sky-300' : 'text-white/60'}`} />
+                  </span>
+                  <span className="text-[11px] text-white/75">{pos ? '已定位' : '定位中'}</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* 可记录的常见场景（轻量视觉提示） */}
+          {/* 常见场景轻量提示 */}
           <div className="mt-5">
             <p className="mb-2.5 px-1 text-[12px] font-medium text-slate-500">常见可记录场景</p>
             <div className="flex flex-wrap gap-2">
@@ -174,23 +210,33 @@ export default function Capture() {
       )}
 
       {(step === 'analyzing' || step === 'rejected') && (
-        <div className="p-4">
-          <div className="relative overflow-hidden rounded-3xl bg-slate-900 shadow-sm">
-            <img src={preview} alt="现场照片预览" className={`max-h-[58vh] w-full object-contain ${step === 'rejected' ? 'opacity-50' : 'opacity-90'}`} />
+        <div className="page-enter p-4">
+          <div className="relative overflow-hidden rounded-3xl bg-slate-900 shadow-md">
+            <img src={preview} alt="现场照片预览" className={`max-h-[58vh] w-full object-contain ${step === 'rejected' ? 'opacity-50' : 'opacity-95'}`} />
             {step === 'analyzing' && (
-              <div className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 rounded-2xl bg-slate-900/80 px-4 py-3 text-[14px] font-medium text-white backdrop-blur-md" role="status" aria-live="polite">
-                <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
-                正在识别画面并处理隐私区域…
-              </div>
+              <>
+                {/* 丝滑绿线扫描动效 */}
+                <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                  <div className="scan-beam h-1/3 w-full border-b-2 border-emerald-400 bg-gradient-to-b from-transparent via-emerald-400/10 to-emerald-400/35 shadow-[0_6px_24px_rgba(52,211,153,0.7)]" />
+                </div>
+                <div
+                  className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 rounded-2xl bg-slate-900/75 px-4 py-2.5 text-[14px] font-medium text-white backdrop-blur-md"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                  正在识别问题并保护人脸、车牌隐私…
+                </div>
+              </>
             )}
           </div>
           {step === 'rejected' && (
-            <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-5 text-center shadow-xs" role="alert">
+            <div className="sheet-up mt-4 rounded-2xl border border-slate-200/80 bg-white p-5 text-center shadow-xs" role="alert">
               <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-amber-50 text-amber-500">
                 <AlertCircle className="h-6 w-6" />
               </div>
               <p className="mt-3 text-[15px] font-medium text-slate-800">{reason}</p>
-              <button onClick={() => setStep('pick')} className="mt-4 w-full rounded-xl bg-brand py-3 text-[15px] font-semibold text-white active:bg-brand-dark">
+              <button onClick={() => setStep('pick')} className="mt-4 w-full rounded-xl bg-brand py-3 text-[15px] font-semibold text-white transition active:scale-[0.98] active:bg-brand-dark">
                 重新拍一张
               </button>
             </div>
@@ -199,7 +245,7 @@ export default function Capture() {
       )}
 
       {(step === 'confirm' || step === 'submitting') && draft && form && (
-        <div className="space-y-3.5 p-4">
+        <div className="page-enter space-y-3.5 p-4">
           <section className="rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-xs">
             <div className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-emerald-700">
               <ShieldCheck className="h-4 w-4 shrink-0" />
@@ -226,7 +272,12 @@ export default function Capture() {
             </label>
             <div>
               <span className="text-[12px] font-medium text-slate-500">影响程度</span>
-              <div className="mt-1 grid grid-cols-3 gap-2" role="radiogroup" aria-label="影响程度">
+              <div className="relative mt-1 grid grid-cols-3 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="影响程度">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-8px)/3)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
+                  style={{ transform: `translateX(${(form.severity - 1) * 100}%)` }}
+                />
                 {[1, 2, 3].map((s) => (
                   <button
                     key={s}
@@ -234,8 +285,8 @@ export default function Capture() {
                     role="radio"
                     aria-checked={form.severity === s}
                     onClick={() => setForm({ ...form, severity: s })}
-                    className={`rounded-xl border py-2 text-[14px] font-medium transition ${
-                      form.severity === s ? 'border-brand bg-brand-soft text-brand' : 'border-slate-200 bg-white text-slate-600'
+                    className={`relative z-10 rounded-lg py-2 text-[14px] font-medium transition-colors duration-200 ${
+                      form.severity === s ? 'text-brand' : 'text-slate-500'
                     }`}
                   >
                     {SEVERITY_TEXT[s]}
@@ -286,7 +337,7 @@ export default function Capture() {
             <button
               onClick={submit}
               disabled={step === 'submitting' || !pos}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-[16px] font-semibold text-white shadow-sm shadow-brand/25 transition active:bg-brand-dark disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-[16px] font-semibold text-white shadow-sm shadow-brand/25 transition active:scale-[0.98] active:bg-brand-dark disabled:opacity-60"
             >
               {step === 'submitting' && <Loader2 className="h-4 w-4 animate-spin" />}
               {step === 'submitting' ? '正在提交…' : '提交，标到地图上'}
@@ -296,7 +347,7 @@ export default function Capture() {
       )}
 
       {step === 'done' && (
-        <div className="p-5 text-center">
+        <div className="page-enter p-5 text-center">
           <div className="rounded-3xl border border-slate-200/70 bg-white p-7 shadow-xs" role="status">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-50 text-emerald-500">
               <CheckCircle2 className="h-9 w-9" />
@@ -306,7 +357,7 @@ export default function Capture() {
             <p className="mt-3 text-[14px] leading-relaxed text-slate-500">这条记录已经同步到顺路地图，轮椅和视障朋友出门前就能提前看到。</p>
             <button
               onClick={() => nav(`/issue/${doneId}`, { replace: true })}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3.5 text-[15px] font-semibold text-white shadow-sm shadow-brand/25"
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3.5 text-[15px] font-semibold text-white shadow-sm shadow-brand/25 transition active:scale-[0.98]"
             >
               <FileText className="h-4 w-4" />
               查看 12345 反映文本
@@ -317,7 +368,7 @@ export default function Capture() {
                 setDraft(null);
                 setForm(null);
               }}
-              className="mt-2.5 w-full rounded-xl border border-slate-200 py-3 text-[15px] font-medium text-slate-700"
+              className="mt-2.5 w-full rounded-xl border border-slate-200 py-3 text-[15px] font-medium text-slate-700 transition active:scale-[0.98]"
             >
               再拍一张
             </button>

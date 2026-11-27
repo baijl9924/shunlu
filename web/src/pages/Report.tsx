@@ -271,7 +271,7 @@ export default function Report() {
       {/* 城市选择弹窗 */}
       {pickerOpen && (
         <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center" onClick={() => setPickerOpen(false)}>
-          <div className="safe-bottom flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-white p-5 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-up safe-bottom flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-white p-5 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[17px] font-bold text-slate-900">选择报告范围</h2>
               <button onClick={() => setPickerOpen(false)} className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-500" aria-label="关闭">
