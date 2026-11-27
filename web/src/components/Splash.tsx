@@ -55,10 +55,16 @@ export default function Splash() {
           </svg>
         </div>
 
-        <h1 className="splash-text mt-5 text-[28px] font-bold tracking-[0.12em] text-slate-900" style={{ animationDelay: '180ms' }}>
+        <h1
+          className="splash-text font-splash-brush mt-5 bg-gradient-to-br from-slate-900 via-slate-800 to-brand bg-clip-text text-[46px] font-normal leading-none tracking-[0.18em] text-transparent"
+          style={{ animationDelay: '180ms' }}
+        >
           顺路
         </h1>
-        <p className="splash-text mt-2 text-[15px] font-medium tracking-wide text-slate-500" style={{ animationDelay: '340ms' }}>
+        <p
+          className="splash-text font-splash-tagline mt-3 text-[18px] tracking-[0.2em] text-slate-600"
+          style={{ animationDelay: '340ms' }}
+        >
           顺路 · 让每条路都顺
         </p>
 

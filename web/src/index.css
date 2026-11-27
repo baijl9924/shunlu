@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "SplashBrush";
+  src: url("./assets/fonts/splash-brush.woff2") format("woff2");
+  font-display: block;
+}
+
+@font-face {
+  font-family: "SplashTagline";
+  src: url("./assets/fonts/splash-tagline.woff2") format("woff2");
+  font-display: block;
+}
+
+.font-splash-brush {
+  font-family: "SplashBrush", "STKaiti", "KaiTi", serif;
+}
+
+.font-splash-tagline {
+  font-family: "SplashTagline", "STSong", "Songti SC", serif;
+}
+
 @theme {
   --color-brand: #1677ff;
   --color-brand-dark: #0e5fd8;
