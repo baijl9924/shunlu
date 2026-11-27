@@ -1,0 +1,48 @@
+name: Auto Deploy Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'web/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'version.json'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Pull, build, and restart Shunlu on server
+        run: |
+          ssh -o StrictHostKeyChecking=no root@"${{ secrets.DEPLOY_HOST }}" '
+            set -e
+            cd /opt/shunlu
+            cp -f web/dist/shunlu.apk /tmp/shunlu.apk 2>/dev/null || true
+            OLD_LOCK=$(sha256sum package-lock.json | awk "{print \$1}")
+            git fetch origin main
+            git reset --hard origin/main
+            NEW_LOCK=$(sha256sum package-lock.json | awk "{print \$1}")
+            if [ "$OLD_LOCK" != "$NEW_LOCK" ]; then
+              npm ci --no-audit --no-fund
+            fi
+            npm run build
+            mv -f /tmp/shunlu.apk web/dist/shunlu.apk 2>/dev/null || true
+            systemctl restart shunlu
+            sleep 2
+            curl -fsS http://127.0.0.1:8787/api/config > /dev/null
+            echo "AUTO_DEPLOY_OK"
+          '

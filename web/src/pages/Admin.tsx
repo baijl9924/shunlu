@@ -34,6 +34,18 @@ export default function Admin() {
     load();
   }
 
+  async function resetPassword(u: AdminUser) {
+    const next = window.prompt(`为「${u.nickname}」设置新密码（至少 6 位）：`);
+    if (!next) return;
+    try {
+      await api(`/api/admin/users/${u.id}/reset-password`, { method: 'POST', json: { newPassword: next } });
+      window.alert(`已重置「${u.nickname}」的密码，该用户需重新登录`);
+      load();
+    } catch (e) {
+      window.alert((e as Error).message);
+    }
+  }
+
   async function logout() {
     await api('/api/admin/logout', { method: 'POST' }).catch(() => {});
     sessionStorage.removeItem('shunlu.admin');
@@ -156,9 +168,12 @@ export default function Admin() {
                   <td>{u.hasPassword ? '已设密码' : '旧版免密'}</td>
                   <td>{u.issues}</td>
                   <td className="text-slate-500">{new Date(u.createdAt).toLocaleString('zh-CN')}</td>
-                  <td>
+                  <td className="space-x-2">
                     <button onClick={() => toggleRole(u)} className="rounded-lg border border-slate-200 px-3 py-1 text-[12px] font-medium text-slate-700 hover:border-brand hover:text-brand">
                       {u.role === 'admin' ? '取消管理员' : '设为管理员'}
+                    </button>
+                    <button onClick={() => resetPassword(u)} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[12px] font-medium text-amber-800 hover:bg-amber-100">
+                      重置密码
                     </button>
                   </td>
                 </tr>

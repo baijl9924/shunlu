@@ -5,6 +5,7 @@ import { App as CapApp } from '@capacitor/app';
 import BottomNav from './components/BottomNav';
 import Onboarding from './components/Onboarding';
 import Splash from './components/Splash';
+import UpdateBanner from './components/UpdateBanner';
 import { useApp } from './lib/store';
 import Home from './pages/Home';
 import Capture from './pages/Capture';
@@ -83,6 +84,7 @@ export default function App() {
         </Routes>
       </main>
       {showNav && <BottomNav />}
+      {!isFullPage && <UpdateBanner />}
       {!isFullPage && <Onboarding />}
       {!isFullPage && <Splash />}
     </div>

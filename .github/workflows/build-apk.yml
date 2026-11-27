@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'web/**'
+      - 'version.json'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
     inputs:
@@ -54,7 +55,7 @@ jobs:
         env:
           SERVER_URL: ${{ inputs.server_url }}
 
-      - name: Add Android platform & inject permissions
+      - name: Add Android platform, version & permissions
         working-directory: web
         run: |
           npx cap add android
@@ -74,6 +75,13 @@ jobs:
               }
             }
             fs.writeFileSync(p, xml);
+
+            const v = JSON.parse(fs.readFileSync("../version.json", "utf8"));
+            const gp = "android/app/build.gradle";
+            let g = fs.readFileSync(gp, "utf8");
+            g = g.replace(/versionCode\s+\d+/, `versionCode ${v.versionCode}`);
+            g = g.replace(/versionName\s+"[^"]+"/, `versionName "${v.version}"`);
+            fs.writeFileSync(gp, g);
           '
 
       - name: Generate Android launcher icons from logo.svg
@@ -120,8 +128,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VER=$(node -e 'console.log(require("./version.json").version)')
           gh release delete apk-latest --yes 2>/dev/null || true
           git push origin :refs/tags/apk-latest 2>/dev/null || true
           gh release create apk-latest shunlu.apk \
-            --title "顺路 Android APK（最新构建）" \
-            --notes "自动构建的 Android 安装包，直接下载 shunlu.apk 即可在安卓手机安装体验。连接服务：https://38-76-207-16.sslip.io"
+            --title "顺路 Android APK v${VER}（最新构建）" \
+            --notes "自动构建的 Android 安装包 v${VER}，直接下载 shunlu.apk 安装体验。官网：https://www.shunlu.cc.cd"
+
+      - name: Sync APK directly to production website
+        if: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          scp -o StrictHostKeyChecking=no shunlu.apk root@"${{ secrets.DEPLOY_HOST }}":/opt/shunlu/web/dist/shunlu.apk

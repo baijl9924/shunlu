@@ -126,7 +126,18 @@ function levelOf(points: number) {
   return { name: levels[idx].name, index: idx, next: next ? { name: next.name, need: next.min - points } : null };
 }
 
-// ---------- 配置与公开统计 ----------
+// ---------- 配置、版本与公开统计 ----------
+const VERSION_FILE = path.resolve(import.meta.dirname, '../../version.json');
+function readVersion() {
+  try {
+    return JSON.parse(fs.readFileSync(VERSION_FILE, 'utf8'));
+  } catch {
+    return { version: '1.0.0', versionCode: 1, notes: '', apkUrl: 'https://www.shunlu.cc.cd/shunlu.apk' };
+  }
+}
+
+app.get('/api/version', (c) => c.json(readVersion()));
+
 app.get('/api/config', (c) =>
   c.json({ tmapKey: process.env.TMAP_KEY?.trim() || '', aiMock: AI_MOCK, categories: CATEGORIES }),
 );
@@ -691,6 +702,18 @@ app.patch('/api/admin/users/:id', async (c) => {
   if (body.role === 'admin' || body.role === 'user') {
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(body.role, c.req.param('id'));
   }
+  return c.json({ ok: true });
+});
+
+app.post('/api/admin/users/:id/reset-password', async (c) => {
+  if (!isAdmin(c)) return c.json({ error: '无权限' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const next = String(body.newPassword || '').trim();
+  if (next.length < 6 || next.length > 64) return c.json({ error: '新密码需为 6–64 位' }, 400);
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(c.req.param('id'));
+  if (!user) return c.json({ error: '用户不存在' }, 404);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(next), c.req.param('id'));
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(c.req.param('id'));
   return c.json({ ok: true });
 });
 

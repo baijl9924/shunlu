@@ -29,12 +29,14 @@ const RELEASE_URL = 'https://github.com/baijl9924/shunlu/releases/tag/apk-latest
 
 export default function Landing() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [ver, setVer] = useState<{ version: string; notes: string } | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [qrApk, setQrApk] = useState('');
   const [qrWeb, setQrWeb] = useState('');
 
   useEffect(() => {
     api<Stats>('/api/stats').then(setStats).catch(() => {});
+    api<{ version: string; notes: string }>('/api/version').then(setVer).catch(() => {});
     api<Issue[]>('/api/issues')
       .then((list) => setIssues(list.slice(0, 4)))
       .catch(() => {});
@@ -130,7 +132,9 @@ export default function Landing() {
                 <Download className="h-5 w-5" />
                 <span>
                   下载 Android 安装包
-                  <span className="ml-1.5 text-[12px] font-normal text-white/80">APK · 4.3 MB</span>
+                  <span className="ml-1.5 text-[12px] font-normal text-white/80">
+                    {ver ? `v${ver.version} · ` : ''}APK 4.3 MB
+                  </span>
                 </span>
               </a>
 
