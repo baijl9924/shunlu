@@ -18,7 +18,7 @@ export default function App() {
   const showNav = !isAdmin && !loc.pathname.startsWith('/capture') && !loc.pathname.startsWith('/issue');
 
   return (
-    <div className={isAdmin || isReport ? 'min-h-full' : 'mx-auto flex h-full max-w-md flex-col bg-[#f3f5f4] shadow-xl'}>
+    <div className={isAdmin || isReport ? 'safe-top min-h-full' : 'safe-top mx-auto flex h-full max-w-md flex-col bg-[#f3f5f4] shadow-xl'}>
       <main className={isAdmin || isReport ? '' : 'relative flex-1 overflow-y-auto'}>
         <Routes>
           <Route path="/" element={<Home />} />

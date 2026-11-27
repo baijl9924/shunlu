@@ -20,7 +20,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" role="dialog" aria-modal aria-labelledby="ob-title">
+    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/50 sm:items-center" role="dialog" aria-modal aria-labelledby="ob-title">
       <form onSubmit={submit} className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-8 sm:rounded-3xl">
         <div className="mb-4 flex items-center gap-3">
           <img src="/logo.svg" width={48} height={48} alt="" />

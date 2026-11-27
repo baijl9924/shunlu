@@ -123,7 +123,7 @@ export default function MapView({ tmapKey, center, zoom = 15, issues = [], onSel
   }, [center.lat, center.lng]);
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div className={`relative isolate z-0 overflow-hidden ${className || ''}`}>
       <div ref={el} className="absolute inset-0" aria-label="问题地图" role="application" />
       {onCenterChange && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full" aria-hidden>

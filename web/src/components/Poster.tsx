@@ -82,7 +82,7 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
   }, [nickname, level, issues, confirmed, fixed]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-6" role="dialog" aria-modal aria-label="分享海报" onClick={onClose}>
+    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/80 p-6" role="dialog" aria-modal aria-label="分享海报" onClick={onClose}>
       {url ? <img src={url} alt="我的顺路体检官海报" className="max-h-[75vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} /> : <p className="text-white">生成中…</p>}
       <p className="mt-4 text-[15px] text-white">长按图片保存或分享</p>
       {url && (
