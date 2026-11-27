@@ -1,3 +1,4 @@
+import { Check, Paintbrush, Undo2 } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { loadImage } from '../lib/image';
 
@@ -61,7 +62,7 @@ const MosaicEditor = forwardRef<MosaicHandle, { src: string }>(function MosaicEd
     <div>
       <canvas
         ref={canvasRef}
-        className={`w-full rounded-2xl bg-gray-200 ${editing ? 'touch-none ring-4 ring-accent' : ''}`}
+        className={`w-full rounded-xl bg-slate-100 ${editing ? 'touch-none ring-2 ring-brand' : ''}`}
         aria-label="打码后的现场照片"
         onPointerDown={(e) => {
           if (!editing) return;
@@ -72,17 +73,29 @@ const MosaicEditor = forwardRef<MosaicHandle, { src: string }>(function MosaicEd
         onPointerMove={(e) => editing && drawing.current && paint(e)}
         onPointerUp={() => (drawing.current = false)}
       />
-      <div className="mt-2 flex gap-2 text-[14px]">
-        <button type="button" onClick={() => setEditing((v) => !v)} className={`rounded-full px-4 py-2 ${editing ? 'bg-accent text-white' : 'bg-white text-gray-700 shadow-sm'}`}>
-          {editing ? '✅ 涂抹完成' : '🖌️ 手动补涂马赛克'}
+      <div className="mt-2.5 flex gap-2 text-[13px]">
+        <button
+          type="button"
+          onClick={() => setEditing((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 font-medium transition ${
+            editing ? 'bg-brand text-white' : 'border border-slate-200 bg-white text-slate-700'
+          }`}
+        >
+          {editing ? <Check className="h-4 w-4" /> : <Paintbrush className="h-4 w-4" />}
+          {editing ? '完成涂抹' : '手动补涂马赛克'}
         </button>
         {edited && (
-          <button type="button" onClick={reset} className="rounded-full bg-white px-4 py-2 text-gray-700 shadow-sm">
-            ↩️ 撤销涂抹
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 font-medium text-slate-600"
+          >
+            <Undo2 className="h-4 w-4" />
+            撤销
           </button>
         )}
       </div>
-      {editing && <p className="mt-1 text-[13px] text-gray-500">用手指在照片上涂抹需要遮挡的区域</p>}
+      {editing && <p className="mt-1.5 text-[12px] text-slate-500">用手指在照片上涂抹需要遮挡的人脸或车牌</p>}
     </div>
   );
 });

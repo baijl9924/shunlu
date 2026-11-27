@@ -25,13 +25,13 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
       c.height = H;
       const ctx = c.getContext('2d')!;
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#0f7b55');
-      g.addColorStop(1, '#0a4f37');
+      g.addColorStop(0, '#2563eb');
+      g.addColorStop(1, '#0e5fd8');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
 
       // 装饰：盲道圆点
-      ctx.fillStyle = 'rgba(251,191,36,0.18)';
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
       for (let x = 40; x < W; x += 60) for (let y = 40; y < 300; y += 60) (ctx.beginPath(), ctx.arc(x, y, 10, 0, Math.PI * 2), ctx.fill());
 
       ctx.fillStyle = '#fff';
@@ -44,12 +44,12 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
       ctx.fillStyle = '#fff';
       roundRect(ctx, 50, 300, W - 100, 600, 36);
       ctx.fill();
-      ctx.fillStyle = '#1f2933';
+      ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 44px "PingFang SC", "Microsoft YaHei", sans-serif';
       ctx.fillText(nickname, 100, 390);
-      ctx.fillStyle = '#0f7b55';
+      ctx.fillStyle = '#1677ff';
       ctx.font = '30px "PingFang SC", "Microsoft YaHei", sans-serif';
-      ctx.fillText(`🏅 ${level}`, 100, 445);
+      ctx.fillText(level, 100, 445);
 
       const items = [
         [issues, '标记问题'],
@@ -58,20 +58,20 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
       ] as const;
       items.forEach(([n, label], i) => {
         const x = 100 + i * 190;
-        ctx.fillStyle = '#0f7b55';
+        ctx.fillStyle = '#1677ff';
         ctx.font = 'bold 72px "PingFang SC", "Microsoft YaHei", sans-serif';
         ctx.fillText(String(n), x, 580);
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = '#64748b';
         ctx.font = '28px "PingFang SC", "Microsoft YaHei", sans-serif';
         ctx.fillText(label, x, 625);
       });
 
-      ctx.fillStyle = '#374151';
+      ctx.fillStyle = '#334155';
       ctx.font = '30px "PingFang SC", "Microsoft YaHei", sans-serif';
       wrap(ctx, `我在顺路标记了 ${issues} 个无障碍问题，帮轮椅、视障朋友和推婴儿车的家长提前避开路障。`, 100, 720, W - 200, 46);
 
       // 二维码
-      const qr = await QRCode.toDataURL(location.origin, { margin: 1, width: 220, color: { dark: '#0a4f37', light: '#ffffff' } });
+      const qr = await QRCode.toDataURL(location.origin, { margin: 1, width: 220, color: { dark: '#0f172a', light: '#ffffff' } });
       const img = new Image();
       img.src = qr;
       await img.decode();

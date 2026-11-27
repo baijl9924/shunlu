@@ -54,8 +54,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className={isAdmin || isReport ? 'safe-top min-h-full' : 'safe-top mx-auto flex h-full max-w-md flex-col bg-[#f3f5f4] shadow-xl'}>
-      <main className={isAdmin || isReport ? '' : 'relative flex-1 overflow-y-auto'}>
+    <div className={isAdmin ? 'safe-top min-h-full bg-surface' : 'mx-auto flex h-full max-w-md flex-col bg-surface shadow-xl'}>
+      <main className={isAdmin ? '' : 'relative flex-1 overflow-y-auto'}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/capture" element={<Capture />} />
@@ -67,7 +67,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {showNav && !isReport && <BottomNav />}
+      {showNav && <BottomNav />}
       {!loggedIn && !isAdmin && !isReport && <Onboarding />}
     </div>
   );

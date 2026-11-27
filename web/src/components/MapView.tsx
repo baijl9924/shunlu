@@ -127,7 +127,7 @@ export default function MapView({ tmapKey, center, zoom = 15, issues = [], onSel
       <div ref={el} className="absolute inset-0" aria-label="问题地图" role="application" />
       {onCenterChange && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full" aria-hidden>
-          <img src={pinSvg('#0f7b55')} width={36} height={46} alt="" />
+          <img src={pinSvg('#1677ff')} width={36} height={46} alt="" />
         </div>
       )}
       {error && (

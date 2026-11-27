@@ -59,23 +59,11 @@ export const STATUS_TEXT: Record<Issue['status'], string> = {
   fixed: '已整改',
 };
 export const STATUS_COLOR: Record<Issue['status'], string> = {
-  pending: '#e5484d',
+  pending: '#ef4444',
   reported: '#f59e0b',
-  fixed: '#0f7b55',
+  fixed: '#10b981',
 };
 export const SEVERITY_TEXT: Record<number, string> = { 1: '轻微不便', 2: '影响通行', 3: '安全隐患' };
-
-export const CATEGORY_ICON: Record<string, string> = {
-  盲道被占用: '🚲',
-  盲道断头或损坏: '🧱',
-  缺少坡道或坡道损坏: '♿',
-  坡道过陡: '⛰️',
-  台阶没有扶手: '🪜',
-  无障碍电梯故障: '🛗',
-  无障碍卫生间问题: '🚻',
-  无障碍停车位被占: '🅿️',
-  其他: '📍',
-};
 
 export function timeAgo(ts: number) {
   const s = (Date.now() - ts) / 1000;

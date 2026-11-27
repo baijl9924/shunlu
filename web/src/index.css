@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #0f7b55;
-  --color-brand-dark: #0a5c3f;
-  --color-brand-soft: #e7f5ee;
+  --color-brand: #1677ff;
+  --color-brand-dark: #0e5fd8;
+  --color-brand-soft: #eef5ff;
   --color-accent: #f59e0b;
-  --color-ink: #1f2933;
-  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei", sans-serif;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-surface: #f7f8fa;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei", sans-serif;
 }
 
 html,
@@ -17,15 +19,15 @@ body,
 
 body {
   margin: 0;
-  background: #f3f5f4;
+  background: var(--color-surface);
   color: var(--color-ink);
-  font-size: 16px;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 无障碍：明显的键盘焦点 */
 :focus-visible {
-  outline: 3px solid var(--color-accent);
+  outline: 2.5px solid var(--color-brand);
   outline-offset: 2px;
 }
 
@@ -42,14 +44,6 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-@keyframes scan {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(100%); }
-}
-.scan-line {
-  animation: scan 1.6s ease-in-out infinite alternate;
 }
 
 @media print {
