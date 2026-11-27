@@ -1,0 +1,18 @@
+{
+  "name": "shunlu",
+  "private": true,
+  "version": "0.1.0",
+  "description": "顺路：随手拍城市无障碍问题，AI 识别、打码、上地图，并生成 12345 反映文本",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c green,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w web",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}
