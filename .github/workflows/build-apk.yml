@@ -1,0 +1,103 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: '服务端 HTTPS 地址（留空则使用 web/capacitor.config.json 中的默认值）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build web
+        run: npm run build
+
+      - name: Override server URL if provided
+        if: ${{ inputs.server_url != '' }}
+        working-directory: web
+        run: |
+          node -e '
+            const fs = require("fs");
+            const cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+            cfg.server.url = process.env.SERVER_URL;
+            fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
+          '
+        env:
+          SERVER_URL: ${{ inputs.server_url }}
+
+      - name: Add Android platform & inject permissions
+        working-directory: web
+        run: |
+          npx cap add android
+          npx cap sync android
+          node -e '
+            const fs = require("fs");
+            const p = "android/app/src/main/AndroidManifest.xml";
+            let xml = fs.readFileSync(p, "utf8");
+            const perms = [
+              "android.permission.CAMERA",
+              "android.permission.ACCESS_COARSE_LOCATION",
+              "android.permission.ACCESS_FINE_LOCATION"
+            ];
+            for (const perm of perms) {
+              if (!xml.includes(perm)) {
+                xml = xml.replace("<application", `<uses-permission android:name="${perm}" />\n    <application`);
+              }
+            }
+            fs.writeFileSync(p, xml);
+          '
+
+      - name: Build Debug APK
+        working-directory: web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Copy APK
+        run: cp web/android/app/build/outputs/apk/debug/app-debug.apk shunlu.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shunlu-apk
+          path: shunlu.apk
+          retention-days: 30
+
+      - name: Publish APK to GitHub Release (apk-latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes 2>/dev/null || true
+          git push origin :refs/tags/apk-latest 2>/dev/null || true
+          gh release create apk-latest shunlu.apk \
+            --title "顺路 Android APK（最新构建）" \
+            --notes "自动构建的 Android 安装包，直接下载 shunlu.apk 即可在安卓手机安装体验。连接服务：https://38-76-207-16.sslip.io"

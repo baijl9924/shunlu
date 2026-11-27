@@ -1,0 +1,13 @@
+{
+  "appId": "com.shunlu.app",
+  "appName": "顺路",
+  "webDir": "dist",
+  "server": {
+    "url": "https://38-76-207-16.sslip.io",
+    "cleartext": false,
+    "allowNavigation": ["38-76-207-16.sslip.io", "*.qq.com", "*.12315.cn"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
