@@ -13,14 +13,17 @@ import Me from './pages/Me';
 import Rank from './pages/Rank';
 import Report from './pages/Report';
 import Admin from './pages/Admin';
+import Landing from './pages/Landing';
 
 export default function App() {
   const { loggedIn, toast } = useApp();
   const loc = useLocation();
   const nav = useNavigate();
   const isAdmin = loc.pathname.startsWith('/admin');
+  const isSite = loc.pathname.startsWith('/site') || loc.pathname.startsWith('/download');
+  const isFullPage = isAdmin || isSite;
   const isReport = loc.pathname.startsWith('/report');
-  const showNav = !isAdmin && !loc.pathname.startsWith('/capture') && !loc.pathname.startsWith('/issue');
+  const showNav = !isFullPage && !loc.pathname.startsWith('/capture') && !loc.pathname.startsWith('/issue');
 
   const ref = useRef({ path: loc.pathname, nav, toast, lastBack: 0 });
   ref.current.path = loc.pathname;
@@ -57,10 +60,12 @@ export default function App() {
   const isCapture = loc.pathname.startsWith('/capture');
 
   return (
-    <div className={isAdmin ? 'safe-top min-h-full bg-surface' : 'mx-auto flex h-full max-w-md flex-col bg-surface shadow-xl'}>
-      <main key={loc.pathname} className={`${isAdmin ? '' : 'relative flex-1 overflow-y-auto'} ${isCapture ? 'capture-enter' : loc.pathname !== '/' ? 'page-enter' : ''}`}>
+    <div className={isFullPage ? (isAdmin ? 'safe-top min-h-full bg-surface' : 'min-h-full bg-surface') : 'mx-auto flex h-full max-w-md flex-col bg-surface shadow-xl'}>
+      <main key={loc.pathname} className={`${isFullPage ? '' : 'relative flex-1 overflow-y-auto'} ${isCapture ? 'capture-enter' : !isFullPage && loc.pathname !== '/' ? 'page-enter' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/site" element={<Landing />} />
+          <Route path="/download" element={<Landing />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/issue/:id" element={<IssuePage />} />
           <Route path="/me" element={<Me />} />
@@ -71,8 +76,8 @@ export default function App() {
         </Routes>
       </main>
       {showNav && <BottomNav />}
-      {!loggedIn && !isAdmin && !isReport && <Onboarding />}
-      {!isAdmin && <Splash />}
+      {!loggedIn && !isFullPage && !isReport && <Onboarding />}
+      {!isFullPage && <Splash />}
     </div>
   );
 }
