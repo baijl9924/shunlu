@@ -1,10 +1,10 @@
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 
-type Props = { nickname: string; level: string; issues: number; confirmed: number; fixed: number; onClose: () => void };
+type Props = { nickname: string; seq?: number; level: string; issues: number; confirmed: number; fixed: number; onClose: () => void };
 
 /** 生成分享海报（Canvas 绘制） */
-export default function Poster({ nickname, level, issues, confirmed, fixed, onClose }: Props) {
+export default function Poster({ nickname, seq, level, issues, confirmed, fixed, onClose }: Props) {
   const [url, setUrl] = useState('');
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
       ctx.fillText(nickname, 100, 390);
       ctx.fillStyle = '#1677ff';
       ctx.font = '30px "PingFang SC", "Microsoft YaHei", sans-serif';
-      ctx.fillText(level, 100, 445);
+      ctx.fillText(seq ? `第 ${seq} 号顺路体检官 · ${level}` : level, 100, 445);
 
       const items = [
         [issues, '标记问题'],
@@ -88,7 +88,7 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
 
       setUrl(c.toDataURL('image/png'));
     })();
-  }, [nickname, level, issues, confirmed, fixed]);
+  }, [nickname, seq, level, issues, confirmed, fixed]);
 
   return (
     <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/80 p-6" role="dialog" aria-modal aria-label="分享海报" onClick={onClose}>

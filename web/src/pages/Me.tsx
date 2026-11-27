@@ -6,6 +6,8 @@ import { api, type Issue } from '../lib/api';
 import { useApp } from '../lib/store';
 
 type MeData = {
+  id: string;
+  seq: number;
   nickname: string;
   role: 'user' | 'admin';
   hasPassword: boolean;
@@ -113,12 +115,15 @@ export default function Me() {
             <button className="rounded-xl bg-white/20 px-4 text-[14px] font-medium">保存</button>
           </form>
         ) : (
-          <div className="flex items-center justify-between">
-            <button onClick={() => setEditName(true)} className="inline-flex items-center gap-2 text-left">
-              <span className="text-[22px] font-bold tracking-tight">{me.nickname}</span>
-              <Pencil className="h-4 w-4 text-white/70" />
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => setEditName(true)} className="inline-flex min-w-0 items-center gap-2 text-left">
+              <span className="truncate text-[22px] font-bold tracking-tight">{me.nickname}</span>
+              <Pencil className="h-4 w-4 shrink-0 text-white/70" />
             </button>
-            {me.role === 'admin' && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold">管理员</span>}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/95">第 {me.seq} 号体检官</span>
+              {me.role === 'admin' && <span className="rounded-full bg-amber-400/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-900">管理员</span>}
+            </div>
           </div>
         )}
         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[14px] text-white/90">
@@ -271,7 +276,7 @@ export default function Me() {
           </div>
         </section>
       </div>
-      {poster && <Poster nickname={me.nickname} level={level.name} issues={stats.issues} confirmed={stats.confirmed} fixed={stats.fixed} onClose={() => setPoster(false)} />}
+      {poster && <Poster nickname={me.nickname} seq={me.seq} level={level.name} issues={stats.issues} confirmed={stats.confirmed} fixed={stats.fixed} onClose={() => setPoster(false)} />}
     </div>
   );
 }

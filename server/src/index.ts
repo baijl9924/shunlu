@@ -266,8 +266,14 @@ app.get('/api/me', (c) => {
   const mine = db
     .prepare(`${ISSUE_SELECT} WHERE i.user_id = ? AND i.hidden = 0 ORDER BY i.created_at DESC LIMIT 100`)
     .all(user.id) as IssueRow[];
+  const seq = (
+    db.prepare('SELECT COUNT(*) AS n FROM users WHERE created_at < ? OR (created_at = ? AND id <= ?)').get(user.created_at, user.created_at, user.id) as {
+      n: number;
+    }
+  ).n;
   return c.json({
     id: user.id,
+    seq,
     nickname: user.nickname,
     role: user.role,
     hasPassword: !!user.password_hash,
