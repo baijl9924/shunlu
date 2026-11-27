@@ -160,19 +160,20 @@ export async function generateReport(r: ReportInput): Promise<string> {
   }
 }
 
-export async function summarizeCity(scope: string, stats: unknown): Promise<string> {
-  const fallback = `${scope}目前共标记无障碍问题若干，详见下方统计。建议优先处理严重程度高、被多人确认的问题点，并对高发类型开展集中整治。`;
+export async function summarizeCity(scope: string, stats: any): Promise<string> {
+  const n = Number(stats?.total?.n || 0);
+  const fallback = `${scope}目前共汇总 ${n} 处市民随手拍记录。建议优先处置影响通行安全的高危点位，并针对高发问题开展定点巡查。\n1. 优先对标记为安全隐患的点位开展现场核查与限时整改。\n2. 针对盲道占用与坡道破损等高频问题，建立常态化巡检机制。\n3. 鼓励市民持续复查反馈，形成“发现—反映—整改”闭环。`;
   if (!client) return `【模拟模式】${fallback}`;
   try {
     const res = await client.chat.completions.create(
       {
         model: TEXT_MODEL,
-        temperature: 0.5,
+        temperature: 0.4,
         messages: [
           {
             role: 'system',
             content:
-              '你是无障碍环境评估专家。根据市民随手拍汇总的数据，为该地区写一份简明的《无障碍体检报告》摘要：先用 2-3 句总结整体状况与最突出的问题，再给出 3 条具体、可执行的整改建议（编号列出）。300 字以内，语气客观建设性，纯文本不要使用 Markdown 符号。',
+              '你是城市无障碍环境评估助手。根据市民随手拍数据，为该地区撰写简明的《无障碍体检报告》结论。严格按以下格式输出纯文本（禁止使用任何 Markdown 符号如 ** 或 #）：\n第一段：用 2 句话概括现状（若样本数少于 5 条，请立足已记录的具体点位与类型客观描述，不要夸大为全市或全国整体薄弱）。\n空一行后，给出 3 条具体、可落地的整改建议，严格以“1. ”“2. ”“3. ”开头，每条不超过 45 字。总字数控制在 240 字以内。',
           },
           { role: 'user', content: `地区：${scope}\n数据：${JSON.stringify(stats)}` },
         ],

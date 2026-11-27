@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import BottomNav from './components/BottomNav';
 import Onboarding from './components/Onboarding';
+import Splash from './components/Splash';
 import { useApp } from './lib/store';
 import Home from './pages/Home';
 import Capture from './pages/Capture';
@@ -71,6 +72,7 @@ export default function App() {
       </main>
       {showNav && <BottomNav />}
       {!loggedIn && !isAdmin && !isReport && <Onboarding />}
+      {!isAdmin && <Splash />}
     </div>
   );
 }

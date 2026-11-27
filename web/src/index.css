@@ -104,6 +104,67 @@ body {
   animation: scanSweep 1.8s ease-in-out infinite alternate;
 }
 
+/* 开屏暖心动画：路径描边 + 文字柔焦浮现 */
+@keyframes splashPop {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.splash-logo {
+  animation: splashPop 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pathDraw {
+  from {
+    stroke-dasharray: 90;
+    stroke-dashoffset: 90;
+  }
+  to {
+    stroke-dasharray: 90;
+    stroke-dashoffset: 0;
+  }
+}
+.splash-path {
+  animation: pathDraw 760ms cubic-bezier(0.25, 0.8, 0.25, 1) 120ms both;
+}
+
+@keyframes dotBloom {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.splash-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dotBloom 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splashReveal {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+.splash-text {
+  animation: splashReveal 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }

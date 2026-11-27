@@ -1,8 +1,10 @@
-import { BarChart3, Camera, ChevronDown, ChevronRight, FileText, Globe, LocateFixed, MapPin, Printer, Search, X } from 'lucide-react';
+import { BarChart3, Camera, ChevronDown, ChevronRight, FileText, Globe, ImageDown, Lightbulb, LocateFixed, MapPin, Printer, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
-import { api, type Issue } from '../lib/api';
+import { StatusBadge } from '../components/IssueCard';
+import ReportPoster from '../components/ReportPoster';
+import { api, assetUrl, type Issue } from '../lib/api';
 import { useApp } from '../lib/store';
 
 type ReportData = {
@@ -17,6 +19,35 @@ type ReportData = {
 
 const HOT_CITIES = ['北京市', '上海市', '广州市', '深圳市', '杭州市', '成都市', '武汉市', '南京市', '西安市', '重庆市', '长春市', '沈阳市'];
 
+function calcHealth(t: ReportData['total']) {
+  const n = Math.max(1, t.n);
+  const fixed = t.fixed || 0;
+  const reported = t.reported || 0;
+  const severe = t.severe || 0;
+  const raw = 68 + Math.round((fixed / n) * 28) + Math.round((reported / n) * 8) - Math.round((severe / n) * 22);
+  const score = Math.max(45, Math.min(98, raw));
+  if (score >= 85) return { score, grade: 'A 优良', color: '#10b981', pill: 'bg-emerald-50 text-emerald-700' };
+  if (score >= 72) return { score, grade: 'B+ 良好', color: '#1677ff', pill: 'bg-brand-soft text-brand' };
+  if (score >= 60) return { score, grade: 'B 待提升', color: '#f59e0b', pill: 'bg-amber-50 text-amber-700' };
+  return { score, grade: 'C 需关注', color: '#ef4444', pill: 'bg-red-50 text-red-600' };
+}
+
+function parseSummary(text: string) {
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const overviewParts: string[] = [];
+  const suggestions: string[] = [];
+  for (const line of lines) {
+    const m = line.match(/^[1-9][.、)\s]+(.+)$/);
+    if (m) suggestions.push(m[1].trim());
+    else if (suggestions.length > 0) suggestions[suggestions.length - 1] += line;
+    else overviewParts.push(line);
+  }
+  return { overview: overviewParts.join(' '), suggestions };
+}
+
 export default function Report() {
   const { userGeo, refreshGeo } = useApp();
   const [params, setParams] = useSearchParams();
@@ -24,12 +55,12 @@ export default function Report() {
   const paramCity = params.get('city') || '';
   const district = params.get('district') || '';
 
-  // 默认展示用户当前所在城市；未指定且有定位城市时自动采用定位城市
   const activeCity = explicitAll ? '' : paramCity || userGeo?.city || '';
 
   const [data, setData] = useState<ReportData | null>(null);
   const [dataCities, setDataCities] = useState<{ city: string; issues: number }[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [posterOpen, setPosterOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
 
@@ -84,13 +115,18 @@ export default function Report() {
 
   const max = Math.max(1, ...(data?.byCategory.map((c) => c.n) || [1]));
   const rate = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
+  const health = data && data.total.n > 0 ? calcHealth(data.total) : null;
+  const parsed = useMemo(() => (data?.summary ? parseSummary(data.summary) : { overview: '', suggestions: [] }), [data?.summary]);
+  const titleText = `${activeCity ? `${activeCity}${district}` : '全国'}无障碍体检报告`;
+
+  const pendingCount = data ? Math.max(0, data.total.n - (data.total.reported || 0) - (data.total.fixed || 0)) : 0;
 
   return (
-    <div className="min-h-full bg-surface pb-10">
+    <div className="min-h-full bg-surface pb-12">
       <header className="no-print safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-slate-200/70 bg-white/95 px-4 py-2.5 backdrop-blur-md">
         <button
           onClick={() => setPickerOpen(true)}
-          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[14px] font-semibold text-slate-800 active:bg-slate-100"
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[14px] font-semibold text-slate-800 transition active:scale-95 active:bg-slate-100"
         >
           {activeCity ? <MapPin className="h-4 w-4 shrink-0 text-brand" /> : <Globe className="h-4 w-4 shrink-0 text-brand" />}
           <span className="truncate">{activeCity || '全国汇总'}</span>
@@ -100,27 +136,27 @@ export default function Report() {
         {activeCity && (
           <button
             onClick={() => selectCity('')}
-            className="shrink-0 rounded-full px-2.5 py-1.5 text-[12px] font-medium text-slate-500 active:bg-slate-100"
+            className="shrink-0 rounded-full px-2.5 py-1.5 text-[12px] font-medium text-slate-500 transition active:bg-slate-100"
           >
             看全国
           </button>
         )}
 
-        <button
-          onClick={() => window.print()}
-          className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white active:bg-brand-dark"
-        >
-          <Printer className="h-3.5 w-3.5" />
-          导出 PDF
-        </button>
+        {data && data.total.n > 0 && (
+          <button
+            onClick={() => setPosterOpen(true)}
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-xs transition active:scale-95 active:bg-brand-dark"
+          >
+            <ImageDown className="h-3.5 w-3.5" />
+            分享长图
+          </button>
+        )}
       </header>
 
-      {/* 顶部摘要卡片 */}
-      <div className="bg-gradient-to-br from-brand to-brand-dark px-5 py-6 text-white">
+      {/* 顶部横幅 */}
+      <div className="bg-gradient-to-br from-brand to-brand-dark px-5 pb-14 pt-6 text-white">
         <p className="text-[12px] font-medium text-white/75">无障碍环境城市体检</p>
-        <h1 className="mt-1 text-[24px] font-bold tracking-tight">
-          {activeCity ? `${activeCity}${district}` : '全国'}体检报告
-        </h1>
+        <h1 className="mt-1 text-[23px] font-bold tracking-tight">{titleText}</h1>
         <p className="mt-1 text-[12px] text-white/70">更新于 {data ? new Date(data.generatedAt).toLocaleString('zh-CN') : '…'}</p>
 
         {/* 区县快捷切换 */}
@@ -128,7 +164,7 @@ export default function Report() {
           <div className="no-print no-scrollbar mt-4 flex gap-1.5 overflow-x-auto pb-0.5">
             <button
               onClick={() => setParams({ city: activeCity })}
-              className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${!district ? 'bg-white text-brand' : 'bg-white/15 text-white'}`}
+              className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition active:scale-95 ${!district ? 'bg-white text-brand shadow-xs' : 'bg-white/15 text-white'}`}
             >
               全市
             </button>
@@ -136,7 +172,7 @@ export default function Report() {
               <button
                 key={d.district}
                 onClick={() => setParams({ city: activeCity, district: d.district })}
-                className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${district === d.district ? 'bg-white text-brand' : 'bg-white/15 text-white'}`}
+                className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition active:scale-95 ${district === d.district ? 'bg-white text-brand shadow-xs' : 'bg-white/15 text-white'}`}
               >
                 {d.district} ({d.n})
               </button>
@@ -146,15 +182,15 @@ export default function Report() {
       </div>
 
       {error && <p className="p-6 text-[14px] text-red-600">{error}</p>}
-      {!data && !error && <p className="p-12 text-center text-[14px] text-slate-400">正在汇总数据…</p>}
+      {!data && !error && <p className="p-12 text-center text-[14px] text-slate-400">正在汇总体检数据…</p>}
 
       {data && data.total.n === 0 && (
-        <div className="m-4 rounded-2xl border border-slate-200/70 bg-white p-8 text-center shadow-xs">
+        <div className="-mt-8 mx-4 rounded-2xl border border-slate-200/70 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand">
             <MapPin className="h-7 w-7" />
           </div>
           <p className="mt-4 text-[16px] font-semibold text-slate-900">{activeCity ? `${activeCity}${district}暂时还没有记录` : '暂时还没有记录'}</p>
-          <p className="mt-1 text-[13px] text-slate-500">拍下身边的第一处无障碍问题，即可生成本城体检报告</p>
+          <p className="mt-1 text-[13px] text-slate-500">拍下身边的第一处无障碍问题，即可点亮本城体检报告</p>
           <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link to="/capture" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-[14px] font-semibold text-white">
               <Camera className="h-4 w-4" />
@@ -173,23 +209,82 @@ export default function Report() {
         </div>
       )}
 
-      {data && data.total.n > 0 && (
-        <div className="space-y-4 p-4">
-          <section className="grid grid-cols-2 gap-2.5">
-            <Kpi n={data.total.n} label="已记录问题" />
-            <Kpi n={data.total.severe || 0} label="安全隐患" accent />
-            <Kpi n={`${rate(data.total.fixed || 0, data.total.n)}%`} label="整改率" />
-            <Kpi n={data.total.users} label="参与市民" />
+      {data && data.total.n > 0 && health && (
+        <div className="-mt-9 space-y-3.5 px-4">
+          {/* 城市无障碍健康度环形评分卡 */}
+          <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-4">
+              <HealthRing score={health.score} color={health.color} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-bold text-slate-900">无障碍健康度</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${health.pill}`}>{health.grade}</span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-slate-400">综合整改率、反映进展与安全隐患占比评估</p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <MiniStat n={data.total.n} label="已记录" />
+                  <MiniStat n={`${rate(data.total.fixed || 0, data.total.n)}%`} label="整改率" good />
+                  <MiniStat n={data.total.severe || 0} label="高危隐患" danger />
+                </div>
+              </div>
+            </div>
+
+            {/* 状态分布比例条 */}
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
+                {pendingCount > 0 && <div className="bg-red-400 transition-all" style={{ width: `${(pendingCount / data.total.n) * 100}%` }} />}
+                {(data.total.reported || 0) > 0 && (
+                  <div className="bg-amber-400 transition-all" style={{ width: `${((data.total.reported || 0) / data.total.n) * 100}%` }} />
+                )}
+                {(data.total.fixed || 0) > 0 && (
+                  <div className="bg-emerald-500 transition-all" style={{ width: `${((data.total.fixed || 0) / data.total.n) * 100}%` }} />
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="inline-flex items-center gap-1">
+                  <i className="h-2 w-2 rounded-full bg-red-400" /> 待反映 {pendingCount}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <i className="h-2 w-2 rounded-full bg-amber-400" /> 已反映 {data.total.reported || 0}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <i className="h-2 w-2 rounded-full bg-emerald-500" /> 已整改 {data.total.fixed || 0}
+                </span>
+                <span className="text-slate-400">{data.total.users} 人参与</span>
+              </div>
+            </div>
           </section>
 
+          {/* 现状摘要 */}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
             <h2 className="mb-2 flex items-center gap-1.5 text-[15px] font-semibold text-slate-900">
               <FileText className="h-4 w-4 text-brand" />
-              体检结论与建议
+              现状摘要
             </h2>
-            <p className="whitespace-pre-wrap rounded-xl bg-brand-soft/60 p-3.5 text-[14px] leading-relaxed text-slate-700">{data.summary}</p>
+            <p className="rounded-xl bg-brand-soft/65 p-3.5 text-[14px] leading-relaxed text-slate-700">{parsed.overview || data.summary}</p>
           </section>
 
+          {/* 结构化可落地建议卡片 */}
+          {parsed.suggestions.length > 0 && (
+            <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
+              <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-slate-900">
+                <Lightbulb className="h-4 w-4 text-amber-500" />
+                优先整改建议
+              </h2>
+              <ol className="space-y-2.5">
+                {parsed.suggestions.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 rounded-xl bg-slate-50/90 p-3">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-brand-soft text-[12px] font-bold text-brand">
+                      0{idx + 1}
+                    </span>
+                    <p className="text-[13.5px] leading-relaxed text-slate-700">{item}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* 问题类型分布 */}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
             <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-slate-900">
               <BarChart3 className="h-4 w-4 text-brand" />
@@ -203,7 +298,7 @@ export default function Report() {
                     <span className="truncate">{c.category}</span>
                   </span>
                   <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                    <span className="block h-full rounded-full bg-brand" style={{ width: `${(c.n / max) * 100}%` }} />
+                    <span className="block h-full rounded-full bg-brand transition-all duration-500" style={{ width: `${(c.n / max) * 100}%` }} />
                   </span>
                   <span className="w-7 text-right font-semibold text-slate-800">{c.n}</span>
                 </li>
@@ -211,6 +306,7 @@ export default function Report() {
             </ul>
           </section>
 
+          {/* 各区县情况 */}
           {data.byDistrict.length > 0 && (
             <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
               <h2 className="mb-2.5 text-[15px] font-semibold text-slate-900">各区县情况</h2>
@@ -227,7 +323,7 @@ export default function Report() {
                   {data.byDistrict.map((d) => (
                     <tr key={d.district} className="border-b border-slate-50 last:border-0">
                       <td className="py-2.5">
-                        <button className="font-medium text-brand" onClick={() => setParams({ city: activeCity, district: d.district })}>
+                        <button className="font-medium text-brand" onClick={() => setParams(activeCity ? { city: activeCity, district: d.district } : { scope: 'all', district: d.district })}>
                           {d.district}
                         </button>
                       </td>
@@ -241,20 +337,22 @@ export default function Report() {
             </section>
           )}
 
+          {/* 关注度最高的实拍点位 */}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-            <h2 className="mb-3 text-[15px] font-semibold text-slate-900">关注度最高的问题</h2>
-            <ol className="space-y-2">
-              {data.top.map((i, idx) => (
+            <h2 className="mb-3 text-[15px] font-semibold text-slate-900">市民最关注的问题</h2>
+            <ol className="space-y-2.5">
+              {data.top.map((i) => (
                 <li key={i.id}>
-                  <Link to={`/issue/${i.id}`} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 active:bg-slate-100">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-[12px] font-bold text-slate-500 shadow-2xs">
-                      {idx + 1}
-                    </span>
+                  <Link to={`/issue/${i.id}`} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 transition active:scale-[0.99] active:bg-slate-100">
+                    <img src={assetUrl(i.photo)} alt={i.title} className="h-14 w-14 shrink-0 rounded-lg bg-slate-200 object-cover" loading="lazy" />
                     <span className="min-w-0 flex-1">
-                      <b className="block truncate text-[14px] text-slate-900">{i.title}</b>
-                      <span className="block truncate text-[12px] text-slate-500">{i.address}</span>
+                      <span className="flex items-center gap-1.5">
+                        <StatusBadge status={i.status} />
+                        <b className="truncate text-[14px] text-slate-900">{i.title}</b>
+                      </span>
+                      <span className="mt-1 block truncate text-[12px] text-slate-500">{i.address}</span>
+                      <span className="mt-0.5 block text-[11px] text-slate-400">{i.confirmCount} 人确认遇到</span>
                     </span>
-                    <span className="shrink-0 text-[12px] text-slate-500">{i.confirmCount} 确认</span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
                   </Link>
                 </li>
@@ -262,8 +360,26 @@ export default function Report() {
             </ol>
           </section>
 
-          <p className="px-1 text-[11px] leading-relaxed text-slate-400">
-            说明：本报告基于市民通过「顺路」自愿提交的随手拍数据汇总生成，仅供参考。
+          {/* 底部双操作按钮：保存长图 + 导出 PDF */}
+          <div className="no-print grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              onClick={() => setPosterOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-[14px] font-semibold text-white shadow-xs transition active:scale-[0.98]"
+            >
+              <ImageDown className="h-4 w-4" />
+              保存长图分享
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-3 text-[14px] font-semibold text-slate-700 transition active:scale-[0.98]"
+            >
+              <Printer className="h-4 w-4" />
+              导出 PDF
+            </button>
+          </div>
+
+          <p className="px-1 text-center text-[11px] leading-relaxed text-slate-400">
+            本报告基于市民通过「顺路」自愿提交的随手拍数据汇总生成，仅供参考。
           </p>
         </div>
       )}
@@ -327,7 +443,7 @@ export default function Report() {
                   <button
                     key={c.city}
                     onClick={() => selectCity(c.city)}
-                    className={`rounded-xl border px-2.5 py-2 text-center text-[13px] transition ${
+                    className={`rounded-xl border px-2.5 py-2 text-center text-[13px] transition active:scale-95 ${
                       activeCity === c.city ? 'border-brand bg-brand-soft font-semibold text-brand' : 'border-slate-200/80 bg-white text-slate-700 active:bg-slate-50'
                     }`}
                   >
@@ -340,15 +456,58 @@ export default function Report() {
           </div>
         </div>
       )}
+
+      {posterOpen && data && health && (
+        <ReportPoster
+          title={titleText}
+          score={health.score}
+          grade={health.grade}
+          gradeColor={health.color}
+          total={data.total}
+          byCategory={data.byCategory}
+          overview={parsed.overview || data.summary}
+          suggestions={parsed.suggestions}
+          onClose={() => setPosterOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
-function Kpi({ n, label, accent }: { n: number | string; label: string; accent?: boolean }) {
+function HealthRing({ score, color }: { score: number; color: string }) {
+  const r = 36;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - score / 100);
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-      <p className={`text-[26px] font-bold tracking-tight ${accent ? 'text-red-500' : 'text-slate-900'}`}>{n}</p>
-      <p className="mt-0.5 text-[12px] text-slate-500">{label}</p>
+    <div className="relative grid h-[88px] w-[88px] shrink-0 place-items-center">
+      <svg viewBox="0 0 88 88" className="h-full w-full -rotate-90">
+        <circle cx="44" cy="44" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7.5" />
+        <circle
+          cx="44"
+          cy="44"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="7.5"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          className="transition-all duration-700 ease-out"
+        />
+      </svg>
+      <div className="absolute text-center">
+        <span className="block text-[22px] font-bold leading-none text-slate-900">{score}</span>
+        <span className="mt-0.5 block text-[10px] text-slate-400">健康分</span>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ n, label, good, danger }: { n: number | string; label: string; good?: boolean; danger?: boolean }) {
+  return (
+    <div className="rounded-xl bg-slate-50 py-1.5">
+      <p className={`text-[16px] font-bold leading-tight ${good ? 'text-emerald-600' : danger && Number(n) > 0 ? 'text-red-500' : 'text-slate-900'}`}>{n}</p>
+      <p className="mt-0.5 text-[10px] text-slate-500">{label}</p>
     </div>
   );
 }
