@@ -1,14 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1677ff"/>
+    <linearGradient id="bg" x1="12" y1="6" x2="116" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4da3ff"/>
+      <stop offset="52%" stop-color="#1677ff"/>
+      <stop offset="100%" stop-color="#0a4ec4"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="82" cy="40" r="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="road" x1="28" y1="106" x2="82" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="-12" x2="0" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#ea8c00"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="18" fill="url(#g)"/>
-  <path d="M18 49 C 25 38, 22 29, 32 23 S 44 14, 46 12" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round"/>
-  <circle cx="21" cy="45" r="2.2" fill="#93c5fd"/>
-  <circle cx="26" cy="36" r="2.2" fill="#93c5fd"/>
-  <circle cx="32" cy="24" r="2.4" fill="#ffffff"/>
-  <circle cx="43" cy="15" r="3" fill="#fbbf24"/>
+
+  <!-- 主圆角底板 + 微妙光泽与内描边 -->
+  <rect width="128" height="128" rx="32" fill="url(#bg)"/>
+  <rect width="128" height="128" rx="32" fill="url(#glow)"/>
+  <rect x="2" y="2" width="124" height="124" rx="30" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="2"/>
+
+  <!-- 背景城市地图雷达弧线与微弱街区线条 -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.8">
+    <circle cx="82" cy="42" r="24"/>
+    <circle cx="82" cy="42" r="44" stroke-dasharray="6 6"/>
+    <circle cx="82" cy="42" r="66"/>
+  </g>
+  <path d="M18 68 H44 M96 86 H112 M34 22 V42" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- 道路投影（与道路同形，柔和自然） -->
+  <path
+    d="M26 105 C32 82, 48 73, 80 67 C60 76, 48 86, 46 105 C44 110, 25 110, 26 105 Z"
+    fill="#07348a"
+    fill-opacity="0.22"
+    transform="translate(2, 4)"
+  />
+
+  <!-- 无障碍畅通道路（优雅 S 弯，圆润起点直抵水滴标尖端） -->
+  <path
+    d="M26 105 C32 82, 48 73, 80 67 C60 76, 48 86, 46 105 C44 110, 25 110, 26 105 Z"
+    fill="url(#road)"
+  />
+
+  <!-- 道路正中的盲道暖金引导纹（严格居中于道路内） -->
+  <g fill="#f59e0b">
+    <rect x="33.5" y="92.5" width="4.8" height="9.5" rx="2.4" transform="rotate(14 36 97)"/>
+    <rect x="42.5" y="81.5" width="4.2" height="8" rx="2.1" transform="rotate(42 44.5 85.5)"/>
+    <circle cx="55.5" cy="76" r="2.4"/>
+    <circle cx="65.5" cy="71.5" r="2"/>
+  </g>
+
+  <!-- 目的地落点水波小环 -->
+  <ellipse cx="82" cy="67" rx="10" ry="3.6" fill="#ffffff" fill-opacity="0.28"/>
+
+  <!-- 右上方定位水滴标（尖端正好落在 (82, 66)） -->
+  <g transform="translate(82, 42)">
+    <circle cx="0" cy="0" r="21" fill="#ffffff" fill-opacity="0.16"/>
+    <path
+      d="M0 -22 C11.5 -22, 19 -13.5, 19 -3 C19 9.5, 5.5 19.5, 0 24.5 C-5.5 19.5, -19 9.5, -19 -3 C-19 -13.5, -11.5 -22, 0 -22 Z"
+      fill="#ffffff"
+    />
+    <circle cx="0" cy="-3" r="9.5" fill="url(#gold)"/>
+    <path d="M-4.2 -3 L-1.2 0 L4.5 -5.8" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>

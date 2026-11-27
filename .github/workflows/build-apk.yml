@@ -76,6 +76,30 @@ jobs:
             fs.writeFileSync(p, xml);
           '
 
+      - name: Generate Android launcher icons from logo.svg
+        run: |
+          node -e '
+            const sharp = require("sharp");
+            const fs = require("fs");
+            const path = require("path");
+            const svg = fs.readFileSync("web/public/logo.svg");
+            const res = "web/android/app/src/main/res";
+            const sizes = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+            (async () => {
+              for (const [d, s] of Object.entries(sizes)) {
+                const dir = path.join(res, "mipmap-" + d);
+                fs.mkdirSync(dir, { recursive: true });
+                await sharp(svg, { density: 300 }).resize(s, s).png().toFile(path.join(dir, "ic_launcher.png"));
+                await sharp(svg, { density: 300 }).resize(s, s).png().toFile(path.join(dir, "ic_launcher_round.png"));
+                await sharp(svg, { density: 300 }).resize(Math.round(s * 1.5), Math.round(s * 1.5)).png().toFile(path.join(dir, "ic_launcher_foreground.png"));
+              }
+              const bgXml = path.join(res, "values/ic_launcher_background.xml");
+              if (fs.existsSync(bgXml)) {
+                fs.writeFileSync(bgXml, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="ic_launcher_background">#1677FF</color>\n</resources>\n`);
+              }
+            })();
+          '
+
       - name: Build Debug APK
         working-directory: web/android
         run: |

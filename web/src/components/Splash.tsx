@@ -38,20 +38,65 @@ export default function Splash() {
 
       {/* 中央品牌动效 */}
       <div className="relative flex flex-col items-center text-center">
-        <div className="splash-logo relative grid h-20 w-20 place-items-center rounded-[24px] bg-gradient-to-br from-[#3b82f6] to-[#1677ff] shadow-[0_14px_34px_rgba(22,119,255,0.28)]">
-          <svg viewBox="0 0 64 64" className="h-16 w-16">
+        <div className="splash-logo relative h-24 w-24 overflow-hidden rounded-[26px] shadow-[0_16px_38px_rgba(22,119,255,0.28)]">
+          <svg viewBox="0 0 128 128" className="h-full w-full">
+            <defs>
+              <linearGradient id="sp-bg" x1="12" y1="6" x2="116" y2="124" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#4da3ff" />
+                <stop offset="52%" stopColor="#1677ff" />
+                <stop offset="100%" stopColor="#0a4ec4" />
+              </linearGradient>
+              <radialGradient id="sp-glow" cx="82" cy="40" r="52" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.30" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+              </radialGradient>
+              <linearGradient id="sp-road" x1="28" y1="106" x2="82" y2="66" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="100%" stopColor="#dbeafe" />
+              </linearGradient>
+              <linearGradient id="sp-gold" x1="0" y1="-12" x2="0" y2="8" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#fbbf24" />
+                <stop offset="100%" stopColor="#ea8c00" />
+              </linearGradient>
+            </defs>
+            <rect width="128" height="128" rx="32" fill="url(#sp-bg)" />
+            <rect width="128" height="128" rx="32" fill="url(#sp-glow)" />
+            <rect x="2" y="2" width="124" height="124" rx="30" fill="none" stroke="#ffffff" strokeOpacity="0.2" strokeWidth="2" />
+
+            <g fill="none" stroke="#ffffff" strokeOpacity="0.14" strokeWidth="1.8">
+              <circle cx="82" cy="42" r="24" />
+              <circle cx="82" cy="42" r="44" strokeDasharray="6 6" />
+              <circle cx="82" cy="42" r="66" />
+            </g>
+            <path d="M18 68 H44 M96 86 H112 M34 22 V42" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="2.2" strokeLinecap="round" />
+
             <path
-              d="M16 49 C 24 38, 21 29, 32 23 S 44 14, 47 11"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="5.5"
-              strokeLinecap="round"
-              className="splash-path"
+              d="M26 105 C32 82, 48 73, 80 67 C60 76, 48 86, 46 105 C44 110, 25 110, 26 105 Z"
+              fill="#07348a"
+              fillOpacity="0.22"
+              transform="translate(2, 4)"
             />
-            <circle cx="20" cy="45" r="2.2" fill="#93c5fd" className="splash-dot" style={{ animationDelay: '220ms' }} />
-            <circle cx="25" cy="36" r="2.2" fill="#93c5fd" className="splash-dot" style={{ animationDelay: '340ms' }} />
-            <circle cx="32" cy="24" r="2.4" fill="#ffffff" className="splash-dot" style={{ animationDelay: '460ms' }} />
-            <circle cx="44" cy="14" r="3.2" fill="#fbbf24" className="splash-dot" style={{ animationDelay: '580ms' }} />
+            <path
+              d="M26 105 C32 82, 48 73, 80 67 C60 76, 48 86, 46 105 C44 110, 25 110, 26 105 Z"
+              fill="url(#sp-road)"
+            />
+            <g fill="#f59e0b">
+              <rect x="33.5" y="92.5" width="4.8" height="9.5" rx="2.4" transform="rotate(14 36 97)" className="splash-dot" style={{ animationDelay: '180ms' }} />
+              <rect x="42.5" y="81.5" width="4.2" height="8" rx="2.1" transform="rotate(42 44.5 85.5)" className="splash-dot" style={{ animationDelay: '280ms' }} />
+              <circle cx="55.5" cy="76" r="2.4" className="splash-dot" style={{ animationDelay: '360ms' }} />
+              <circle cx="65.5" cy="71.5" r="2" className="splash-dot" style={{ animationDelay: '440ms' }} />
+            </g>
+
+            <ellipse cx="82" cy="67" rx="10" ry="3.6" fill="#ffffff" fillOpacity="0.28" className="splash-dot" style={{ animationDelay: '360ms' }} />
+            <g transform="translate(82, 42)" className="splash-dot" style={{ animationDelay: '320ms' }}>
+              <circle cx="0" cy="0" r="21" fill="#ffffff" fillOpacity="0.16" />
+              <path
+                d="M0 -22 C11.5 -22, 19 -13.5, 19 -3 C19 9.5, 5.5 19.5, 0 24.5 C-5.5 19.5, -19 9.5, -19 -3 C-19 -13.5, -11.5 -22, 0 -22 Z"
+                fill="#ffffff"
+              />
+              <circle cx="0" cy="-3" r="9.5" fill="url(#sp-gold)" />
+              <path d="M-4.2 -3 L-1.2 0 L4.5 -5.8" fill="none" stroke="#ffffff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+            </g>
           </svg>
         </div>
 
