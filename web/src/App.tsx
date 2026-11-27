@@ -20,14 +20,13 @@ export const isAppEntryHost = () => Capacitor.isNativePlatform() || window.locat
 export const appHomePath = () => (isAppEntryHost() ? '/' : '/app');
 
 export default function App() {
-  const { loggedIn, toast } = useApp();
+  const { toast } = useApp();
   const loc = useLocation();
   const nav = useNavigate();
   const appHost = isAppEntryHost();
   const isAdmin = loc.pathname.startsWith('/admin');
   const isSite = loc.pathname.startsWith('/site') || loc.pathname.startsWith('/download') || (!appHost && loc.pathname === '/');
   const isFullPage = isAdmin || isSite;
-  const isReport = loc.pathname.startsWith('/report');
   const showNav = !isFullPage && !loc.pathname.startsWith('/capture') && !loc.pathname.startsWith('/issue');
 
   const ref = useRef({ path: loc.pathname, nav, toast, lastBack: 0 });
@@ -84,7 +83,7 @@ export default function App() {
         </Routes>
       </main>
       {showNav && <BottomNav />}
-      {!loggedIn && !isFullPage && !isReport && <Onboarding />}
+      {!isFullPage && <Onboarding />}
       {!isFullPage && <Splash />}
     </div>
   );

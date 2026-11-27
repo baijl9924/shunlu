@@ -112,6 +112,45 @@ export async function analyzeImage(aiCanvasJpeg: Buffer): Promise<Analysis> {
   return sanitize(extractJson(res.choices[0]?.message?.content || ''));
 }
 
+/** 复查照片审核与隐私检测：过滤无关/不当图片，并定位人脸与车牌以自动打码 */
+export async function moderateRecheckImage(aiCanvasJpeg: Buffer): Promise<{ accept: boolean; reason: string; privacy_boxes: PrivacyBox[] }> {
+  if (!client) return { accept: true, reason: '', privacy_boxes: [] };
+  try {
+    const res = await client.chat.completions.create(
+      {
+        model: VL_MODEL,
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${aiCanvasJpeg.toString('base64')}` } },
+              {
+                type: 'text',
+                text: '用户上传了一张城市道路或公共设施的“复查现场照”。请只输出 JSON：{"accept": 布尔值（真实的道路/建筑/设施现场照为 true；自拍、手机截图、纯文字、广告或含不当内容为 false）, "reason": "accept 为 false 时的友好提示", "privacy_boxes": [{"type":"face"|"plate","bbox":[x1,y1,x2,y2]}]}。bbox 基于 1000x1000 画面。',
+              },
+            ],
+          },
+        ],
+      },
+      { timeout: 30_000 },
+    );
+    const raw = extractJson(res.choices[0]?.message?.content || '');
+    return {
+      accept: raw?.accept !== false,
+      reason: String(raw?.reason || '请上传真实的现场环境照片'),
+      privacy_boxes: Array.isArray(raw?.privacy_boxes)
+        ? raw.privacy_boxes
+            .filter((b: any) => Array.isArray(b?.bbox) && b.bbox.length === 4)
+            .map((b: any) => ({ type: b.type === 'plate' ? 'plate' : 'face', bbox: b.bbox.map(Number) }))
+        : [],
+    };
+  } catch (e) {
+    console.warn('[ai] recheck moderation failed, allowing fallback:', (e as Error).message);
+    return { accept: true, reason: '', privacy_boxes: [] };
+  }
+}
+
 export type ReportInput = {
   category: string;
   title: string;

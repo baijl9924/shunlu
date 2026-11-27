@@ -24,7 +24,15 @@ export type IssueDetail = Issue & {
   confirmed: boolean;
   reportedByMe: boolean;
   mine: boolean;
-  updates: { id: string; type: 'reported' | 'fixed' | 'recheck'; note: string; photo: string | null; createdAt: number; nickname: string }[];
+  canManage: boolean;
+  updates: {
+    id: string;
+    type: 'reported' | 'fixed' | 'fixed_claim' | 'recheck';
+    note: string;
+    photo: string | null;
+    createdAt: number;
+    nickname: string;
+  }[];
 };
 
 export type Config = { tmapKey: string; aiMock: boolean; categories: string[] };
@@ -34,7 +42,17 @@ export const assetUrl = (p: string) => (p.startsWith('http') ? p : API_BASE + p)
 
 const TOKEN_KEY = 'shunlu.token';
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
-export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
+export const setToken = (t: string) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
+
+/** 带用户鉴权头拉取私有图片（如草稿预览图）并返回本地 Object URL */
+export async function fetchAuthedBlobUrl(path: string): Promise<string> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers['x-user-token'] = token;
+  const res = await fetch(API_BASE + path, { headers });
+  if (!res.ok) throw new Error('图片加载失败');
+  return URL.createObjectURL(await res.blob());
+}
 
 export async function api<T = any>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };

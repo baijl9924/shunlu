@@ -8,9 +8,17 @@ export type UserGeo = { lat: number; lng: number; city: string; district: string
 type AppState = {
   config: Config | null;
   nickname: string;
+  role: 'user' | 'admin';
+  hasPassword: boolean;
   loggedIn: boolean;
-  register: (nickname: string) => Promise<void>;
+  authModal: 'login' | 'register' | null;
+  openAuth: (mode?: 'login' | 'register') => void;
+  closeAuth: () => void;
+  register: (nickname: string, password: string) => Promise<void>;
+  login: (nickname: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   setNickname: (n: string) => void;
+  markHasPassword: () => void;
   profile: Profile;
   saveProfile: (p: Profile) => void;
   userGeo: UserGeo | null;
@@ -27,7 +35,10 @@ const GEO_KEY = 'shunlu.geo';
 export function AppProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<Config | null>(null);
   const [nickname, setNickname] = useState(localStorage.getItem('shunlu.nickname') || '');
+  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [hasPassword, setHasPassword] = useState(true);
   const [loggedIn, setLoggedIn] = useState(!!getToken());
+  const [authModal, setAuthModal] = useState<'login' | 'register' | null>(null);
   const [profile, setProfile] = useState<Profile>(() => {
     try {
       return JSON.parse(localStorage.getItem(PROFILE_KEY) || '') as Profile;
@@ -47,7 +58,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toast = useCallback((msg: string) => {
     setToastMsg(msg);
     window.clearTimeout((toast as any)._t);
-    (toast as any)._t = window.setTimeout(() => setToastMsg(''), 2600);
+    (toast as any)._t = window.setTimeout(() => setToastMsg(''), 2800);
   }, []);
 
   const refreshGeo = useCallback(
@@ -78,23 +89,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
       api('/api/me')
         .then((me) => {
           setNickname(me.nickname);
+          setRole(me.role || 'user');
+          setHasPassword(!!me.hasPassword);
           localStorage.setItem('shunlu.nickname', me.nickname);
         })
         .catch((e: Error) => {
-          if (e.message === '未登录') {
-            localStorage.removeItem('shunlu.token');
+          if (e.message === '未登录' || e.message.includes('401')) {
+            setToken('');
+            localStorage.removeItem('shunlu.nickname');
             setLoggedIn(false);
           }
         });
     if (!sessionStorage.getItem(GEO_KEY)) refreshGeo(true);
   }, [refreshGeo]);
 
-  const register = useCallback(async (name: string) => {
-    const u = await api<{ token: string; nickname: string }>('/api/users', { method: 'POST', json: { nickname: name } });
+  const register = useCallback(async (name: string, password: string) => {
+    const u = await api<{ token: string; nickname: string; role: 'user' | 'admin' }>('/api/auth/register', {
+      method: 'POST',
+      json: { nickname: name, password },
+    });
     setToken(u.token);
     localStorage.setItem('shunlu.nickname', u.nickname);
     setNickname(u.nickname);
+    setRole(u.role || 'user');
+    setHasPassword(true);
     setLoggedIn(true);
+    setAuthModal(null);
+  }, []);
+
+  const login = useCallback(async (name: string, password: string) => {
+    const u = await api<{ token: string; nickname: string; role: 'user' | 'admin' }>('/api/auth/login', {
+      method: 'POST',
+      json: { nickname: name, password },
+    });
+    setToken(u.token);
+    localStorage.setItem('shunlu.nickname', u.nickname);
+    setNickname(u.nickname);
+    setRole(u.role || 'user');
+    setHasPassword(true);
+    setLoggedIn(true);
+    setAuthModal(null);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    setToken('');
+    localStorage.removeItem('shunlu.nickname');
+    setNickname('');
+    setRole('user');
+    setLoggedIn(false);
   }, []);
 
   const saveProfile = useCallback((p: Profile) => {
@@ -107,12 +150,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         config,
         nickname,
+        role,
+        hasPassword,
         loggedIn,
+        authModal,
+        openAuth: (m = 'login') => setAuthModal(m),
+        closeAuth: () => setAuthModal(null),
         register,
+        login,
+        logout,
         setNickname: (n) => {
           setNickname(n);
           localStorage.setItem('shunlu.nickname', n);
         },
+        markHasPassword: () => setHasPassword(true),
         profile,
         saveProfile,
         userGeo,

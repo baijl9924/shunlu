@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
 import MapView from '../components/MapView';
 import MosaicEditor, { type MosaicHandle } from '../components/MosaicEditor';
-import { api, assetUrl, SEVERITY_TEXT } from '../lib/api';
+import { api, fetchAuthedBlobUrl, SEVERITY_TEXT } from '../lib/api';
 import { appHomePath } from '../App';
 import { DEFAULT_CENTER, locate } from '../lib/geo';
 import { compressImage } from '../lib/image';
@@ -17,7 +17,7 @@ type Pos = { lat: number; lng: number };
 const HINTS = ['盲道被占用', '缺少坡道或坡道损坏', '台阶没有扶手', '无障碍电梯故障', '无障碍停车位被占'];
 
 export default function Capture() {
-  const { config, userGeo, refreshGeo, toast } = useApp();
+  const { config, loggedIn, openAuth, userGeo, refreshGeo, toast } = useApp();
   const nav = useNavigate();
   const [step, setStep] = useState<Step>('pick');
   const [preview, setPreview] = useState('');
@@ -64,7 +64,8 @@ export default function Capture() {
         setStep('rejected');
         return;
       }
-      setDraft({ id: r.draftId, photo: r.photo, blurredCount: r.blurredCount });
+      const blobUrl = await fetchAuthedBlobUrl(r.photo);
+      setDraft({ id: r.draftId, photo: blobUrl, blurredCount: r.blurredCount });
       setForm(r.analysis);
       setStep('confirm');
     } catch (e) {
@@ -150,7 +151,7 @@ export default function Capture() {
             <div className="relative z-10 grid grid-cols-3 items-center pt-1">
               <div className="flex justify-center">
                 <button
-                  onClick={() => albumInput.current?.click()}
+                  onClick={() => (loggedIn ? albumInput.current?.click() : (toast('请先登录或注册账号后再上报'), openAuth('register')))}
                   className="flex flex-col items-center gap-1.5 transition active:scale-90"
                   aria-label="从相册选取照片"
                 >
@@ -163,7 +164,7 @@ export default function Capture() {
 
               <div className="flex justify-center">
                 <button
-                  onClick={() => cameraInput.current?.click()}
+                  onClick={() => (loggedIn ? cameraInput.current?.click() : (toast('请先登录或注册账号后再上报'), openAuth('register')))}
                   className="grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/85 p-1.5 shadow-xl transition duration-150 active:scale-90"
                   aria-label="打开相机拍照"
                 >
@@ -252,7 +253,7 @@ export default function Capture() {
               <ShieldCheck className="h-4 w-4 shrink-0" />
               {draft.blurredCount > 0 ? `已自动为 ${draft.blurredCount} 处人脸或车牌打码` : '已核验画面，未检测到清晰人脸或车牌'}
             </div>
-            <MosaicEditor ref={mosaic} src={assetUrl(draft.photo)} />
+            <MosaicEditor ref={mosaic} src={draft.photo} />
           </section>
 
           <section className="space-y-3.5 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">

@@ -1,20 +1,25 @@
-import { Check, CheckCircle2, ChevronLeft, ChevronRight, MapPin, RefreshCw, Share2, ThumbsUp, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, ChevronLeft, ChevronRight, MapPin, RefreshCw, Share2, ThumbsUp, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { appHomePath } from '../App';
 import CategoryIcon from '../components/CategoryIcon';
 import { StatusBadge } from '../components/IssueCard';
 import ReportTextCard from '../components/ReportTextCard';
 import { api, assetUrl, SEVERITY_TEXT, timeAgo, type IssueDetail } from '../lib/api';
-import { appHomePath } from '../App';
 import { compressImage } from '../lib/image';
 import { useApp } from '../lib/store';
 
-const UPDATE_TEXT = { reported: '已向有关部门反映', fixed: '确认已整改', recheck: '复查：问题仍存在' };
+const UPDATE_TEXT: Record<IssueDetail['updates'][number]['type'], string> = {
+  reported: '已向有关部门反映',
+  fixed: '核实已整改完成',
+  fixed_claim: '提交了整改复查凭证（待二次确认）',
+  recheck: '复查：问题仍存在',
+};
 
 export default function IssuePage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { toast } = useApp();
+  const { loggedIn, openAuth, toast } = useApp();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,9 +33,17 @@ export default function IssuePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, loggedIn]);
+
+  function requireLogin() {
+    if (loggedIn) return true;
+    toast('请先登录后再操作');
+    openAuth('login');
+    return false;
+  }
 
   async function confirm() {
+    if (!requireLogin()) return;
     try {
       await api(`/api/issues/${id}/confirm`, { method: 'POST' });
       toast('感谢确认，这会让问题更受重视');
@@ -41,18 +54,30 @@ export default function IssuePage() {
   }
 
   async function addUpdate(type: 'reported' | 'fixed' | 'recheck', photo?: Blob) {
+    if (!requireLogin()) return;
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append('type', type);
       if (photo) fd.append('photo', photo, 'photo.jpg');
-      await api(`/api/issues/${id}/updates`, { method: 'POST', body: fd });
-      toast(type === 'reported' ? '已记录，积分 +5' : '感谢复查，积分 +20');
+      const r = await api<{ message?: string }>(`/api/issues/${id}/updates`, { method: 'POST', body: fd });
+      toast(r.message || (type === 'reported' ? '已记录，积分 +5' : '感谢复查，积分 +20'));
       load();
     } catch (e) {
       toast((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function removeIssue() {
+    if (!window.confirm('确定要撤回/删除这条标记吗？删除后将不再在地图上展示。')) return;
+    try {
+      await api(`/api/issues/${id}`, { method: 'DELETE' });
+      toast('已删除该标记');
+      nav(appHomePath(), { replace: true });
+    } catch (e) {
+      toast((e as Error).message);
     }
   }
 
@@ -87,10 +112,17 @@ export default function IssuePage() {
           <ChevronLeft className="h-6 w-6" />
         </button>
         <h1 className="text-[17px] font-semibold text-slate-900">问题详情</h1>
-        <button onClick={share} className="ml-auto mr-1 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-medium text-brand active:bg-brand-soft" aria-label="分享">
-          <Share2 className="h-4 w-4" />
-          分享
-        </button>
+        <div className="ml-auto flex items-center gap-1 pr-1">
+          {issue.canManage && (
+            <button onClick={removeIssue} className="grid h-9 w-9 place-items-center rounded-full text-red-500 active:bg-red-50" aria-label="删除我的标记" title="删除标记">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <button onClick={share} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-medium text-brand active:bg-brand-soft" aria-label="分享">
+            <Share2 className="h-4 w-4" />
+            分享
+          </button>
+        </div>
       </header>
 
       <img src={assetUrl(issue.photo)} alt={`现场照片：${issue.description}`} className="max-h-[48vh] w-full bg-slate-950 object-contain" />
@@ -133,7 +165,7 @@ export default function IssuePage() {
             <RefreshCw className="h-4 w-4 text-brand" />
             路过复查
           </h2>
-          <p className="mt-1 text-[13px] text-slate-500">再次路过时拍一张，帮大家确认问题是否已经解决（积分 +20）</p>
+          <p className="mt-1 text-[13px] text-slate-500">再次路过时拍一张（同样自动审核并打码），满 2 位市民或原发布者确认后将正式标为「已整改」（积分 +20）</p>
           <input
             ref={fileRef}
             type="file"
@@ -150,6 +182,7 @@ export default function IssuePage() {
             <button
               disabled={busy || issue.status === 'fixed'}
               onClick={() => {
+                if (!requireLogin()) return;
                 setRecheckType('fixed');
                 fileRef.current?.click();
               }}
@@ -161,6 +194,7 @@ export default function IssuePage() {
             <button
               disabled={busy}
               onClick={() => {
+                if (!requireLogin()) return;
                 setRecheckType('recheck');
                 fileRef.current?.click();
               }}
@@ -183,11 +217,13 @@ export default function IssuePage() {
             {issue.updates.map((u) => (
               <li key={u.id}>
                 <span
-                  className={`absolute -left-[6px] mt-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${u.type === 'fixed' ? 'bg-emerald-500' : u.type === 'reported' ? 'bg-amber-500' : 'bg-slate-400'}`}
+                  className={`absolute -left-[6px] mt-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
+                    u.type === 'fixed' ? 'bg-emerald-500' : u.type === 'reported' || u.type === 'fixed_claim' ? 'bg-amber-500' : 'bg-slate-400'
+                  }`}
                   aria-hidden
                 />
                 <p className="text-[14px] font-medium text-slate-800">
-                  {u.nickname} {UPDATE_TEXT[u.type]}
+                  {u.nickname} {UPDATE_TEXT[u.type] || '更新了进展'}
                 </p>
                 {u.note && <p className="text-[13px] text-slate-600">{u.note}</p>}
                 {u.photo && <img src={assetUrl(u.photo)} alt="复查照片" className="mt-1.5 h-28 rounded-xl object-cover" loading="lazy" />}
