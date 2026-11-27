@@ -40,12 +40,18 @@ export default function Report() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setData(null);
     setError('');
     const q = new URLSearchParams();
     if (activeCity) q.set('city', activeCity);
     if (district) q.set('district', district);
-    api<ReportData>(`/api/report?${q}`).then(setData).catch((e) => setError(e.message));
+    api<ReportData>(`/api/report?${q}`)
+      .then((d) => !cancelled && setData(d))
+      .catch((e) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
   }, [activeCity, district]);
 
   useEffect(() => {
