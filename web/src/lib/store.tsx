@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className={`pointer-events-none fixed left-1/2 top-6 z-[100] -translate-x-1/2 rounded-full bg-black/80 px-5 py-2.5 text-[15px] text-white shadow-lg transition-opacity ${toastMsg ? 'opacity-100' : 'opacity-0'}`}
+        className={`pointer-events-none fixed left-1/2 top-6 z-[1100] -translate-x-1/2 rounded-full bg-black/80 px-5 py-2.5 text-[15px] text-white shadow-lg transition-opacity ${toastMsg ? 'opacity-100' : 'opacity-0'}`}
       >
         {toastMsg}
       </div>

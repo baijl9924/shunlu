@@ -8,6 +8,15 @@ export default function Poster({ nickname, level, issues, confirmed, fixed, onCl
   const [url, setUrl] = useState('');
 
   useEffect(() => {
+    const onBack = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('shunlu:back', onBack);
+    return () => window.removeEventListener('shunlu:back', onBack);
+  }, [onClose]);
+
+  useEffect(() => {
     (async () => {
       const W = 750;
       const H = 1200;

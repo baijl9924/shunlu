@@ -98,7 +98,7 @@ export default function Capture() {
   return (
     <div className="min-h-full bg-[#f3f5f4] pb-28">
       <header className="sticky top-0 z-20 flex items-center gap-2 bg-white px-2 py-2 shadow-sm">
-        <button onClick={() => nav(-1)} className="grid h-11 w-11 place-items-center rounded-full text-2xl" aria-label="返回">
+        <button onClick={() => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'))} className="grid h-11 w-11 place-items-center rounded-full text-2xl" aria-label="返回">
           ‹
         </button>
         <h1 className="text-[18px] font-semibold">随手拍</h1>

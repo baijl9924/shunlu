@@ -38,7 +38,7 @@ export default function Report() {
   return (
     <div className="mx-auto min-h-full max-w-3xl bg-white pb-10">
       <header className="no-print sticky top-0 z-10 flex items-center gap-2 border-b bg-white px-2 py-2">
-        <button onClick={() => nav('/')} className="grid h-11 w-11 place-items-center text-2xl" aria-label="返回首页">
+        <button onClick={() => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'))} className="grid h-11 w-11 place-items-center text-2xl" aria-label="返回">
           ‹
         </button>
         <select
