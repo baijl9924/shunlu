@@ -3,10 +3,10 @@ import {
   BarChart3,
   Camera,
   CheckCircle2,
+  Code2,
   Download,
   ExternalLink,
   FileText,
-  Github,
   Globe,
   MapPin,
   ShieldCheck,
@@ -152,7 +152,7 @@ export default function Landing() {
                 人脸与车牌自动打码
               </span>
               <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-slate-600 hover:text-brand">
-                <Github className="h-4 w-4" />
+                <Code2 className="h-4 w-4" />
                 开源代码
                 <ExternalLink className="h-3 w-3" />
               </a>
@@ -334,7 +334,7 @@ export default function Landing() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-5 py-3.5 text-[14px] font-semibold text-white backdrop-blur-xs transition hover:bg-white/20"
                 >
-                  <Github className="h-4 w-4" />
+                  <Code2 className="h-4 w-4" />
                   GitHub 备用下载
                 </a>
                 <Link
