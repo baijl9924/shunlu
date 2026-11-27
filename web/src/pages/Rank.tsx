@@ -24,7 +24,7 @@ export default function Rank() {
 
   return (
     <div className="min-h-full bg-surface pb-10">
-      <header className="safe-top sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 pb-3 pt-3 backdrop-blur-md">
+      <header className="safe-top sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 pb-3 backdrop-blur-md [--st-pad:0.75rem]">
         <h1 className="text-[20px] font-bold tracking-tight text-slate-900">排行榜</h1>
         <div className="relative mt-3 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist">
           <span

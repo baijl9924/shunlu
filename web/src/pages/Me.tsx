@@ -43,7 +43,7 @@ export default function Me() {
 
   return (
     <div className="min-h-full bg-surface pb-14">
-      <section className="safe-top bg-gradient-to-br from-brand to-brand-dark px-5 pb-16 pt-6 text-white">
+      <section className="safe-top bg-gradient-to-br from-brand to-brand-dark px-5 pb-16 text-white [--st-pad:1.5rem]">
         {editName ? (
           <form
             className="flex gap-2"

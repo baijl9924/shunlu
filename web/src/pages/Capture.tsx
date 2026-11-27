@@ -101,8 +101,8 @@ export default function Capture() {
   const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'));
 
   return (
-    <div className="min-h-full bg-surface pb-28">
-      <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 py-2 backdrop-blur-md">
+    <div className="safe-bottom min-h-full bg-surface [--sb-pad:7rem]">
+      <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 pb-2 backdrop-blur-md [--st-pad:0.5rem]">
         <button onClick={goBack} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 transition active:scale-90 active:bg-slate-100" aria-label="返回">
           <ChevronLeft className="h-6 w-6" />
         </button>
@@ -333,7 +333,7 @@ export default function Capture() {
             {locError && <p className="mt-1 text-[12px] text-amber-600">{locError}</p>}
           </section>
 
-          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-slate-200/80 bg-white/95 p-3.5 backdrop-blur-md">
+          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-slate-200/80 bg-white/95 px-3.5 pt-3.5 backdrop-blur-md [--sb-pad:0.875rem]">
             <button
               onClick={submit}
               disabled={step === 'submitting' || !pos}

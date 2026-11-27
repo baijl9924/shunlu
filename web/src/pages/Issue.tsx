@@ -80,8 +80,8 @@ export default function IssuePage() {
   const navUrl = `https://apis.map.qq.com/uri/v1/marker?marker=coord:${issue.lat},${issue.lng};title:${encodeURIComponent(issue.title)};addr:${encodeURIComponent(issue.address)}&referer=shunlu`;
 
   return (
-    <div className="min-h-full bg-surface pb-10">
-      <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 py-2 backdrop-blur-md">
+    <div className="safe-bottom min-h-full bg-surface [--sb-pad:2.5rem]">
+      <header className="safe-top sticky top-0 z-20 flex items-center gap-1 border-b border-slate-200/70 bg-white/95 px-2 pb-2 backdrop-blur-md [--st-pad:0.5rem]">
         <button onClick={() => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'))} className="grid h-10 w-10 place-items-center rounded-full text-slate-700 active:bg-slate-100" aria-label="返回">
           <ChevronLeft className="h-6 w-6" />
         </button>

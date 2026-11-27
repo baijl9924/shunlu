@@ -123,7 +123,7 @@ export default function Report() {
 
   return (
     <div className="min-h-full bg-surface pb-12">
-      <header className="no-print safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-slate-200/70 bg-white/95 px-4 py-2.5 backdrop-blur-md">
+      <header className="no-print safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-slate-200/70 bg-white/95 px-4 pb-2.5 backdrop-blur-md [--st-pad:0.625rem]">
         <button
           onClick={() => setPickerOpen(true)}
           className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[14px] font-semibold text-slate-800 transition active:scale-95 active:bg-slate-100"
@@ -387,7 +387,7 @@ export default function Report() {
       {/* 城市选择弹窗 */}
       {pickerOpen && (
         <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center" onClick={() => setPickerOpen(false)}>
-          <div className="sheet-up safe-bottom flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-white p-5 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-up safe-bottom flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-white px-5 pt-5 [--sb-pad:1.25rem] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[17px] font-bold text-slate-900">选择报告范围</h2>
               <button onClick={() => setPickerOpen(false)} className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-500" aria-label="关闭">

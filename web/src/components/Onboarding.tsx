@@ -22,7 +22,7 @@ export default function Onboarding() {
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal aria-labelledby="ob-title">
-      <form onSubmit={submit} className="safe-bottom w-full max-w-md rounded-t-3xl bg-white p-6 pb-8 shadow-2xl sm:rounded-3xl">
+      <form onSubmit={submit} className="safe-bottom w-full max-w-md rounded-t-3xl bg-white px-6 pt-6 shadow-2xl [--sb-pad:2rem] sm:rounded-3xl">
         <div className="mb-5 flex items-center gap-3.5">
           <img src="/logo.svg" width={46} height={46} alt="" className="rounded-2xl shadow-sm" />
           <div>

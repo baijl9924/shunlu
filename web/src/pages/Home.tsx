@@ -66,7 +66,7 @@ export default function Home() {
         />
 
         {/* 悬浮顶栏与筛选胶囊 */}
-        <div className="safe-top pointer-events-none absolute inset-x-0 top-0 z-10 px-3.5 pt-2.5">
+        <div className="safe-top pointer-events-none absolute inset-x-0 top-0 z-10 px-3.5 [--st-pad:0.625rem]">
           <div className="pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-white/92 px-3 py-2 shadow-[0_6px_24px_rgba(15,23,42,0.1)] ring-1 ring-slate-900/5 backdrop-blur-md">
             <img src="/logo.svg" width={28} height={28} alt="" className="rounded-lg" />
             <div className="min-w-0 flex-1">
@@ -184,7 +184,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-col bg-surface">
-      <header className="safe-top sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 pb-2.5 pt-3 backdrop-blur-md">
+      <header className="safe-top sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 px-4 pb-2.5 backdrop-blur-md [--st-pad:0.75rem]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.svg" width={30} height={30} alt="" className="rounded-lg" />

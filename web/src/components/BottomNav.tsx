@@ -19,7 +19,7 @@ export default function BottomNav() {
   }
 
   return (
-    <nav className="no-print safe-bottom relative z-30 flex border-t border-slate-200/80 bg-white/95 backdrop-blur-md" aria-label="主导航">
+    <nav className="no-print safe-bottom relative z-30 flex border-t border-slate-200/80 bg-white/95 backdrop-blur-md [--sb-pad:4px]" aria-label="主导航">
       <NavLink to="/" end className={cls}>
         {({ isActive }) => (
           <>
