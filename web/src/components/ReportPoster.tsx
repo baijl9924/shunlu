@@ -1,7 +1,9 @@
-import { Download, X } from 'lucide-react';
+import { Download, Share2, X } from 'lucide-react';
 import QRCode from 'qrcode';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { getShareMode, saveImageToGallery, shareImage } from '../lib/share';
+import { useApp } from '../lib/store';
 
 type Props = {
   title: string;
@@ -18,6 +20,36 @@ type Props = {
 /** 一键生成城市无障碍体检报告长图（PNG） */
 export default function ReportPoster({ title, score, grade, gradeColor, total, byCategory, overview, suggestions, onClose }: Props) {
   const [url, setUrl] = useState('');
+  const { toast } = useApp();
+  const mode = useMemo(getShareMode, []);
+  const [sharing, setSharing] = useState(false);
+
+  const doShare = async (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!url || sharing) return;
+    setSharing(true);
+    try {
+      await shareImage(url, 'shunlu-report.png', title, '「顺路」城市无障碍体检报告，扫码查看完整实时数据');
+    } catch (err) {
+      toast((err as Error)?.message || '分享失败，请长按图片保存');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const doSave = async (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!url || sharing) return;
+    setSharing(true);
+    try {
+      await saveImageToGallery(url, 'shunlu-report');
+      toast('已保存到相册');
+    } catch {
+      toast('保存失败，请点「分享给好友」发送');
+    } finally {
+      setSharing(false);
+    }
+  };
 
   useEffect(() => {
     const onBack = (e: Event) => {
@@ -240,17 +272,43 @@ export default function ReportPoster({ title, score, grade, gradeColor, total, b
       ) : (
         <p className="text-[14px] text-white">正在生成高清长图…</p>
       )}
-      <p className="mt-3 text-[13px] text-white/80">长按图片可直接保存到相册或转发给朋友</p>
+      <p className="mt-3 text-[13px] text-white/80">{mode === 'native' ? '保存到相册，或直接分享给微信好友' : '长按图片可直接保存到相册或转发给朋友'}</p>
       {url && (
-        <a
-          href={url}
-          download={`${title}.png`}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-brand shadow-md"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Download className="h-4 w-4" />
-          下载长图
-        </a>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+          {mode === 'native' && (
+            <button
+              type="button"
+              disabled={sharing}
+              onClick={doSave}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-brand shadow-md disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" />
+              保存到相册
+            </button>
+          )}
+          {mode !== 'none' && (
+            <button
+              type="button"
+              disabled={sharing}
+              onClick={doShare}
+              className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold shadow-md disabled:opacity-60 ${mode === 'native' ? 'bg-white/15 text-white' : 'bg-white text-brand'}`}
+            >
+              <Share2 className="h-4 w-4" />
+              {mode === 'native' ? '分享给好友' : '分享 / 保存长图'}
+            </button>
+          )}
+          {mode !== 'native' && (
+            <a
+              href={url}
+              download={`${title}.png`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold shadow-md ${mode === 'none' ? 'bg-white text-brand' : 'bg-white/15 text-white'}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="h-4 w-4" />
+              下载长图
+            </a>
+          )}
+        </div>
       )}
       </div>
     </div>,

@@ -74,6 +74,13 @@ jobs:
                 xml = xml.replace("<application", `<uses-permission android:name="${perm}" />\n    <application`);
               }
             }
+            // 海报「保存到相册」：Android 11+ 无需权限；Android 10 及以下需要写存储权限 + 旧版存储模式
+            if (!xml.includes("WRITE_EXTERNAL_STORAGE")) {
+              xml = xml.replace("<application", `<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n    <application`);
+            }
+            if (!xml.includes("requestLegacyExternalStorage")) {
+              xml = xml.replace(/<application(\s)/, "<application android:requestLegacyExternalStorage=\"true\"$1");
+            }
             fs.writeFileSync(p, xml);
 
             const v = JSON.parse(fs.readFileSync("../version.json", "utf8"));
