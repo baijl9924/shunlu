@@ -1,6 +1,7 @@
 import { Download, X } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type Props = {
   title: string;
@@ -208,13 +209,34 @@ export default function ReportPoster({ title, score, grade, gradeColor, total, b
     })();
   }, [title, score, grade, gradeColor, total, byCategory, overview, suggestions]);
 
-  return (
-    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-slate-950/80 p-5 backdrop-blur-xs" role="dialog" aria-modal aria-label="报告分享长图" onClick={onClose}>
-      <button onClick={onClose} className="absolute right-4 top-12 grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white" aria-label="关闭">
+  // 通过 Portal 挂到 body，避免被带 transform 的页面容器裁切
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1000] flex flex-col overflow-y-auto overscroll-contain bg-slate-950/80 px-5 backdrop-blur-xs"
+      style={{ paddingTop: 'calc(var(--sat, 0px) + 60px)', paddingBottom: 'calc(var(--sab, 0px) + 24px)' }}
+      role="dialog"
+      aria-modal
+      aria-label="报告分享长图"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed right-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white active:bg-white/30"
+        style={{ top: 'calc(var(--sat, 0px) + 12px)' }}
+        aria-label="关闭"
+      >
         <X className="h-5 w-5" />
       </button>
+      <div className="m-auto flex w-full flex-col items-center">
       {url ? (
-        <img src={url} alt={title} className="sheet-up max-h-[72vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+        <img
+          src={url}
+          alt={title}
+          className="sheet-up h-auto w-auto max-w-full rounded-2xl object-contain shadow-2xl"
+          style={{ maxHeight: 'calc(100dvh - var(--sat, 0px) - var(--sab, 0px) - 200px)' }}
+          onClick={(e) => e.stopPropagation()}
+        />
       ) : (
         <p className="text-[14px] text-white">正在生成高清长图…</p>
       )}
@@ -230,7 +252,9 @@ export default function ReportPoster({ title, score, grade, gradeColor, total, b
           下载长图
         </a>
       )}
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

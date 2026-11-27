@@ -1,5 +1,7 @@
+import { Download, X } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type Props = { nickname: string; seq?: number; level: string; issues: number; confirmed: number; fixed: number; onClose: () => void };
 
@@ -12,8 +14,19 @@ export default function Poster({ nickname, seq, level, issues, confirmed, fixed,
       e.preventDefault();
       onClose();
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('shunlu:back', onBack);
-    return () => window.removeEventListener('shunlu:back', onBack);
+    window.addEventListener('keydown', onKey);
+    // 弹窗打开时锁定背景滚动
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('shunlu:back', onBack);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [onClose]);
 
   useEffect(() => {
@@ -90,16 +103,52 @@ export default function Poster({ nickname, seq, level, issues, confirmed, fixed,
     })();
   }, [nickname, seq, level, issues, confirmed, fixed]);
 
-  return (
-    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/80 p-6" role="dialog" aria-modal aria-label="分享海报" onClick={onClose}>
-      {url ? <img src={url} alt="我的顺路体检官海报" className="max-h-[75vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} /> : <p className="text-white">生成中…</p>}
-      <p className="mt-4 text-[15px] text-white">长按图片保存或分享</p>
-      {url && (
-        <a href={url} download="顺路海报.png" className="mt-3 rounded-full bg-white px-6 py-2.5 font-semibold text-brand" onClick={(e) => e.stopPropagation()}>
-          下载海报
-        </a>
-      )}
-    </div>
+  // 通过 Portal 挂到 body：页面容器带有入场动画 transform，会让 fixed 弹窗相对容器定位并被裁切
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1000] flex flex-col overflow-y-auto overscroll-contain bg-black/80 px-6"
+      style={{ paddingTop: 'calc(var(--sat, 0px) + 60px)', paddingBottom: 'calc(var(--sab, 0px) + 24px)' }}
+      role="dialog"
+      aria-modal
+      aria-label="分享海报"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed right-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white active:bg-white/30"
+        style={{ top: 'calc(var(--sat, 0px) + 12px)' }}
+        aria-label="关闭"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <div className="m-auto flex w-full flex-col items-center">
+        {url ? (
+          <img
+            src={url}
+            alt="我的顺路体检官海报"
+            className="sheet-up h-auto w-auto max-w-full rounded-2xl object-contain shadow-2xl"
+            style={{ maxHeight: 'calc(100dvh - var(--sat, 0px) - var(--sab, 0px) - 200px)' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <p className="text-white">生成中…</p>
+        )}
+        <p className="mt-4 text-[14px] text-white/85">长按图片保存或分享</p>
+        {url && (
+          <a
+            href={url}
+            download="顺路海报.png"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-6 py-2.5 font-semibold text-brand shadow-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Download className="h-4 w-4" />
+            下载海报
+          </a>
+        )}
+      </div>
+    </div>,
+    document.body,
   );
 }
 
