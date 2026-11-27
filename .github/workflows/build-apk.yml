@@ -136,9 +136,13 @@ jobs:
             --notes "自动构建的 Android 安装包 v${VER}，直接下载 shunlu.apk 安装体验。官网：https://www.shunlu.cc.cd"
 
       - name: Sync APK directly to production website
-        if: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' }}
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          scp -o StrictHostKeyChecking=no shunlu.apk root@"${{ secrets.DEPLOY_HOST }}":/opt/shunlu/web/dist/shunlu.apk
+          if [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_HOST" ]; then
+            mkdir -p ~/.ssh
+            printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            scp -o StrictHostKeyChecking=no shunlu.apk root@"$DEPLOY_HOST":/opt/shunlu/web/dist/shunlu.apk
+          fi
