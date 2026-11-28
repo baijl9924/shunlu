@@ -158,7 +158,7 @@ export default function Admin() {
           <table className="w-full text-[14px]">
             <thead>
               <tr className="border-b text-left text-slate-500">
-                <th className="whitespace-nowrap py-2 pr-3">唯一昵称</th>
+                <th className="whitespace-nowrap py-2 pr-3">昵称</th>
                 <th className="whitespace-nowrap pr-3">身份</th>
                 <th className="whitespace-nowrap pr-3">密码保护</th>
                 <th className="whitespace-nowrap pr-3">标记数</th>

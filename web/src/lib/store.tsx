@@ -28,8 +28,6 @@ type AppState = {
   saveProfile: (p: Profile) => void;
   userGeo: UserGeo | null;
   refreshGeo: (silent?: boolean) => Promise<UserGeo | null>;
-  largeText: boolean;
-  toggleLargeText: () => void;
   toast: (msg: string) => void;
 };
 
@@ -64,12 +62,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   });
   const [toastMsg, setToastMsg] = useState('');
-  const [largeText, setLargeText] = useState(() => localStorage.getItem('shunlu.largeText') === '1');
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('large-text', largeText);
-    localStorage.setItem('shunlu.largeText', largeText ? '1' : '0');
-  }, [largeText]);
 
   const toast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -248,8 +240,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         saveProfile,
         userGeo,
         refreshGeo,
-        largeText,
-        toggleLargeText: () => setLargeText((v) => !v),
         toast,
       }}
     >

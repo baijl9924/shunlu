@@ -37,14 +37,6 @@ body,
   height: 100%;
 }
 
-/* 大字关怀模式（适老化 / 弱视群体友好） */
-html.large-text {
-  font-size: 118%;
-}
-html.large-text body {
-  font-size: 17px;
-}
-
 body {
   margin: 0;
   background: var(--color-surface);

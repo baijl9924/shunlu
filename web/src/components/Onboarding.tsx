@@ -91,7 +91,7 @@ export default function Onboarding() {
                 {isUpgrade ? '升级正式体检官账号' : mode === 'register' ? '注册顺路账号' : '登录顺路账号'}
               </h1>
               <p className="text-[12px] text-slate-500">
-                {isUpgrade ? '保留当前全部访客标记与公益积分，解锁排行榜与勋章' : '昵称全站唯一，跨设备同步你的标记与积分'}
+                {isUpgrade ? '保留当前访客记录与积分，解锁排行榜与勋章' : '跨设备同步你的标记、积分与勋章'}
               </p>
             </div>
           </div>
@@ -103,7 +103,7 @@ export default function Onboarding() {
         {isUpgrade ? (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-soft/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-slate-700">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-            <p>设好唯一昵称和密码后，你在访客模式下拍过的路障、累计的积分与复查记录将自动归属到本账号，并立即参与体检官排行。</p>
+            <p>设置昵称和密码后，当前访客的标记、积分与复查记录将全部保留并立即参与排行。</p>
           </div>
         ) : (
           /* 滑动切换：登录 / 注册 */
@@ -136,14 +136,14 @@ export default function Onboarding() {
 
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-[13px] font-medium text-slate-700">唯一昵称</span>
+            <span className="mb-1 block text-[13px] font-medium text-slate-700">昵称</span>
             <div className="relative">
               <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={16}
-                placeholder="2–16 个字，全站不可重名"
+                placeholder="2–16 个字"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-3 pl-10 pr-4 text-[15px] outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15"
                 autoFocus
               />

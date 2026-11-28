@@ -30,7 +30,7 @@ const BADGE_ICON: Record<string, React.ComponentType<{ className?: string }>> = 
 };
 
 export default function Me() {
-  const { loggedIn, isGuest, enterAsGuest, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile, largeText, toggleLargeText } = useApp();
+  const { loggedIn, isGuest, enterAsGuest, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile } = useApp();
   const [me, setMe] = useState<MeData | null>(null);
   const [poster, setPoster] = useState(false);
   const [editName, setEditName] = useState(false);
@@ -51,20 +51,18 @@ export default function Me() {
     return (
       <div className="safe-top flex min-h-full flex-col items-center justify-center bg-surface p-6 text-center [--st-pad:2rem]">
         <img src="/logo.svg" width={64} height={64} alt="" className="rounded-2xl shadow-md" />
-        <h1 className="mt-4 text-[20px] font-bold text-slate-900">开始无障碍顺路体检</h1>
-        <p className="mt-1.5 max-w-xs text-[14px] leading-relaxed text-slate-500">
-          免注册即可游客体验 AI 识别、打码与 12345 文本；登录正式账号可参与排行榜、解锁成就勋章并跨设备同步。
-        </p>
+        <h1 className="mt-4 text-[20px] font-bold text-slate-900">顺路无障碍体检</h1>
+        <p className="mt-1.5 max-w-xs text-[14px] text-slate-500">免注册即可体验，登录可参与排行并同步记录</p>
         <div className="mt-6 flex w-full max-w-xs flex-col gap-2.5">
           <button
             onClick={async () => {
               const ok = await enterAsGuest();
-              if (ok) toast('已开启免注册游客体验，随时可升级正式账号');
+              if (ok) toast('已开启游客体验');
             }}
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-[15px] font-semibold text-white shadow-sm shadow-brand/25 active:bg-brand-dark"
           >
             <Compass className="h-4 w-4" />
-            一键游客体验（免注册）
+            一键游客体验
           </button>
           <div className="grid grid-cols-2 gap-2.5">
             <button
@@ -72,32 +70,13 @@ export default function Me() {
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[14px] font-semibold text-slate-700"
             >
               <LogIn className="h-4 w-4 text-brand" />
-              账号登录
+              登录
             </button>
             <button
               onClick={() => openAuth('register')}
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-[14px] font-semibold text-slate-700"
             >
-              注册新账号
-            </button>
-          </div>
-        </div>
-        <div className="mt-6 w-full max-w-xs rounded-2xl border border-slate-200/70 bg-white p-3.5 text-left shadow-xs">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[14px] font-semibold text-slate-900">无障碍大字关怀模式</p>
-              <p className="text-[11px] text-slate-500">放大全站文字与按钮，方便长辈和弱视朋友</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={largeText}
-              onClick={() => (toggleLargeText(), toast(largeText ? '已恢复标准字号' : '已开启大字关怀模式'))}
-              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${largeText ? 'bg-brand' : 'bg-slate-200'}`}
-            >
-              <span
-                className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-xs transition-transform duration-200 ${largeText ? 'translate-x-5' : 'translate-x-0'}`}
-              />
+              注册
             </button>
           </div>
         </div>
@@ -159,7 +138,7 @@ export default function Me() {
             </button>
             <div className="flex shrink-0 items-center gap-1.5">
               {me.isGuest ? (
-                <span className="rounded-full bg-amber-400/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-900">访客体验中</span>
+                <span className="rounded-full bg-amber-400/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-900">访客</span>
               ) : (
                 <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/95">第 {me.seq} 号体检官</span>
               )}
@@ -169,41 +148,36 @@ export default function Me() {
         )}
         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[14px] text-white/90">
           <Award className="h-4 w-4 text-amber-300" />
-          {me.isGuest ? `已累计 ${stats.points} 公益分（暂不入榜）` : `${level.name} · ${stats.points} 积分`}
+          {me.isGuest ? `${stats.points} 积分 · 暂不入榜` : `${level.name} · ${stats.points} 积分`}
         </p>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
-        </div>
-        <p className="mt-1.5 text-[12px] text-white/75">
-          {me.isGuest
-            ? '设置唯一昵称与密码即可转正，原样保留全部标记与积分并解锁排行榜'
-            : level.next
-              ? `再得 ${level.next.need} 积分升级为「${level.next.name}」`
-              : '已达到最高等级，感谢同行'}
-        </p>
+        {!me.isGuest && (
+          <>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-1.5 text-[12px] text-white/75">{level.next ? `再得 ${level.next.need} 积分升级为「${level.next.name}」` : '已达到最高等级，感谢同行'}</p>
+          </>
+        )}
       </section>
 
       <div className="-mt-11 space-y-3.5 px-4">
         {me.isGuest ? (
-          <section className="rounded-2xl border border-brand/25 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-2.5">
-              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[14px] font-bold text-slate-900">当前已累计 {stats.points} 分，设个昵称即可入榜并永久保存</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
-                  访客暂不计入体检官排行榜与勋章成就，今日还可发布 {Math.max(0, (me.guestQuota?.dailyIssueLimit ?? 3) - (me.guestQuota?.todayIssues ?? 0))} /{' '}
-                  {me.guestQuota?.dailyIssueLimit ?? 3} 条真实标记；升级正式账号后将完整继承全部记录并支持跨设备同步。
-                </p>
-                <button
-                  onClick={() => openAuth('upgrade')}
-                  className="mt-3 w-full rounded-xl bg-brand py-2.5 text-[14px] font-semibold text-white shadow-xs active:bg-brand-dark"
-                >
-                  升级正式账号，立即入榜保存
-                </button>
-              </div>
+          <section className="flex items-center gap-3 rounded-2xl border border-brand/20 bg-white px-4 py-3.5 shadow-sm">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+              <Sparkles className="h-4 w-4" />
             </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-bold text-slate-900">转正保留记录与积分</p>
+              <p className="text-[12px] text-slate-500">
+                今日发布 {me.guestQuota?.todayIssues ?? 0}/{me.guestQuota?.dailyIssueLimit ?? 3} · 设昵称即可入榜
+              </p>
+            </div>
+            <button
+              onClick={() => openAuth('upgrade')}
+              className="shrink-0 rounded-xl bg-brand px-3.5 py-2 text-[13px] font-semibold text-white active:bg-brand-dark"
+            >
+              去转正
+            </button>
           </section>
         ) : (
           !me.hasPassword && (
@@ -228,33 +202,28 @@ export default function Me() {
           <Stat n={stats.fixed} label="推动整改" />
         </section>
 
-        <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-          <p className="text-[14px] leading-relaxed text-slate-600">
-            你标记的问题已获得 <b className="text-brand">{stats.confirmed}</b> 次确认，其中 <b className="text-emerald-600">{stats.fixed}</b> 处已经整改。每一次记录都在帮出行不便的朋友少走弯路。
-          </p>
-          <button
-            onClick={() => {
-              if (me.isGuest) {
-                toast('升级正式账号后即可获得专属编号并生成体检官海报');
-                openAuth('upgrade');
-                return;
-              }
-              setPoster(true);
-            }}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-2.5 text-[14px] font-semibold text-white active:bg-brand-dark"
-          >
-            <Share2 className="h-4 w-4" />
-            {me.isGuest ? '升级正式账号，领取专属分享海报' : '生成体检官分享海报'}
-          </button>
-        </section>
+        {!me.isGuest && (
+          <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
+            <p className="text-[14px] leading-relaxed text-slate-600">
+              你标记的问题已获得 <b className="text-brand">{stats.confirmed}</b> 次确认，其中 <b className="text-emerald-600">{stats.fixed}</b> 处已经整改。每一次记录都在帮出行不便的朋友少走弯路。
+            </p>
+            <button
+              onClick={() => setPoster(true)}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-2.5 text-[14px] font-semibold text-white active:bg-brand-dark"
+            >
+              <Share2 className="h-4 w-4" />
+              生成体检官分享海报
+            </button>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-[15px] font-semibold text-slate-900">成就勋章</h2>
             {me.isGuest && (
-              <button onClick={() => openAuth('upgrade')} className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-semibold text-brand">
+              <button onClick={() => openAuth('upgrade')} className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-400 hover:text-brand">
                 <Lock className="h-3 w-3" />
-                {earnedBadgeCount > 0 ? `${earnedBadgeCount} 枚待升级解锁` : '升级后解锁'}
+                {earnedBadgeCount > 0 ? `${earnedBadgeCount} 枚待解锁` : '转正解锁'}
               </button>
             )}
           </div>
@@ -311,35 +280,15 @@ export default function Me() {
         </section>
 
         <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[15px] font-semibold text-slate-900">无障碍大字关怀模式</h2>
-              <p className="mt-0.5 text-[12px] text-slate-500">放大全站文字与按钮尺寸，方便长辈和弱视朋友阅读</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={largeText}
-              onClick={() => (toggleLargeText(), toast(largeText ? '已恢复标准字号' : '已开启大字关怀模式'))}
-              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${largeText ? 'bg-brand' : 'bg-slate-200'}`}
-            >
-              <span
-                className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-xs transition-transform duration-200 ${largeText ? 'translate-x-5' : 'translate-x-0'}`}
-              />
-            </button>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
           <h2 className="text-[15px] font-semibold text-slate-900">账号与安全</h2>
           <div className="mt-3 flex gap-2.5">
             {me.isGuest ? (
               <button
-                onClick={() => openAuth('upgrade')}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft/50 py-2.5 text-[13px] font-semibold text-brand"
+                onClick={() => openAuth('login')}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-700"
               >
-                <Sparkles className="h-4 w-4" />
-                升级正式账号
+                <LogIn className="h-4 w-4 text-brand" />
+                登录已有账号
               </button>
             ) : (
               <button
@@ -353,12 +302,12 @@ export default function Me() {
             <button
               onClick={async () => {
                 if (me.isGuest) {
-                  if (!window.confirm('当前处于临时访客模式，退出后未升级的访客会话将无法找回，确定退出吗？')) return;
+                  if (!window.confirm('退出后当前未转正的访客记录将无法找回，确定退出吗？')) return;
                 } else if (!me.hasPassword && !window.confirm('当前账号还没设置密码，退出后将无法再次登录该账号，确定退出吗？')) {
                   return;
                 }
                 await logout();
-                toast(me.isGuest ? '已退出访客模式' : '已退出登录');
+                toast(me.isGuest ? '已退出访客' : '已退出登录');
               }}
               className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50/60 py-2.5 text-[13px] font-semibold text-red-600"
             >
