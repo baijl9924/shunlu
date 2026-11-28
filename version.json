@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "versionCode": 3,
-  "notes": "新增免注册游客体验与一键转正、示例图 AI 识别试玩、正式签名支持覆盖升级、分享海报保存相册与系统分享。",
+  "version": "1.2.1",
+  "versionCode": 4,
+  "notes": "修复 App 内更新按钮无法唤起浏览器下载的问题；含免注册游客体验、示例图 AI 试玩、正式签名与海报保存相册。",
   "apkUrl": "https://www.shunlu.cc.cd/shunlu.apk"
 }

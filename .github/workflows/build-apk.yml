@@ -89,6 +89,32 @@ jobs:
             g = g.replace(/versionCode\s+\d+/, `versionCode ${v.versionCode}`);
             g = g.replace(/versionName\s+"[^"]+"/, `versionName "${v.version}"`);
             fs.writeFileSync(gp, g);
+
+            // 为 Android WebView 挂载 DownloadListener：遇到 APK 等可下载文件时直接交给系统浏览器下载
+            const mainAct = "android/app/src/main/java/com/shunlu/app/MainActivity.java";
+            fs.writeFileSync(mainAct, [
+              "package com.shunlu.app;",
+              "",
+              "import android.content.Intent;",
+              "import android.net.Uri;",
+              "import android.os.Bundle;",
+              "import com.getcapacitor.BridgeActivity;",
+              "",
+              "public class MainActivity extends BridgeActivity {",
+              "    @Override",
+              "    public void onCreate(Bundle savedInstanceState) {",
+              "        super.onCreate(savedInstanceState);",
+              "        if (getBridge() != null && getBridge().getWebView() != null) {",
+              "            getBridge().getWebView().setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {",
+              "                try {",
+              "                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));",
+              "                } catch (Exception ignored) {}",
+              "            });",
+              "        }",
+              "    }",
+              "}",
+              ""
+            ].join("\n"));
           '
 
       - name: Generate Android launcher icons from logo.svg
