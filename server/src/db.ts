@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   nickname TEXT NOT NULL,
   password_hash TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL DEFAULT 'user',
+  is_guest INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS drafts (
   user_id TEXT NOT NULL,
   analysis TEXT NOT NULL,
   photo TEXT NOT NULL,
+  is_demo INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 
@@ -89,13 +91,20 @@ CREATE TABLE IF NOT EXISTS report_cache (
 );
 `);
 
-// 平滑迁移老库：补齐 password_hash / role 字段，并将历史重名空号去重后加上唯一索引
+// 平滑迁移老库：补齐 password_hash / role / is_guest 与 drafts.is_demo 字段，并将历史重名空号去重后加上唯一索引
 const cols = (db.prepare('PRAGMA table_info(users)').all() as { name: string }[]).map((c) => c.name);
 if (!cols.includes('password_hash')) {
   db.exec("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''");
 }
 if (!cols.includes('role')) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+}
+if (!cols.includes('is_guest')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0');
+}
+const draftCols = (db.prepare('PRAGMA table_info(drafts)').all() as { name: string }[]).map((c) => c.name);
+if (!draftCols.includes('is_demo')) {
+  db.exec('ALTER TABLE drafts ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0');
 }
 
 // 将老用户的 token 迁移到 sessions 表（如果尚未存在），保障老设备平滑在线
@@ -141,6 +150,7 @@ export type User = {
   nickname: string;
   password_hash: string;
   role: 'user' | 'admin';
+  is_guest: number;
   created_at: number;
 };
 

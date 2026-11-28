@@ -1,4 +1,4 @@
-import { Building2, ChevronRight, Users } from 'lucide-react';
+import { Building2, ChevronRight, Sparkles, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -10,17 +10,28 @@ type Data = {
 };
 
 export default function Rank() {
-  const { toast } = useApp();
+  const { toast, loggedIn, isGuest, openAuth } = useApp();
   const [tab, setTab] = useState<'users' | 'cities'>('users');
   const [city, setCity] = useState('');
   const [data, setData] = useState<Data | null>(null);
+  const [guestPoints, setGuestPoints] = useState<number | null>(null);
 
   useEffect(() => {
     api<Data>(`/api/leaderboard${city ? `?city=${encodeURIComponent(city)}` : ''}`)
       .then(setData)
       .catch((e) => toast(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city]);
+  }, [city, isGuest]);
+
+  useEffect(() => {
+    if (loggedIn && isGuest) {
+      api<{ stats: { points: number } }>('/api/me')
+        .then((m) => setGuestPoints(m.stats.points))
+        .catch(() => setGuestPoints(0));
+    } else {
+      setGuestPoints(null);
+    }
+  }, [loggedIn, isGuest]);
 
   return (
     <div className="min-h-full bg-surface pb-10">
@@ -60,6 +71,21 @@ export default function Rank() {
       <div className="p-4">
         {tab === 'users' && (
           <>
+            {loggedIn && isGuest && (
+              <div className="mb-3 flex items-center gap-3 rounded-2xl border border-brand/20 bg-brand-soft/60 px-3.5 py-3">
+                <Sparkles className="h-5 w-5 shrink-0 text-brand" />
+                <div className="min-w-0 flex-1 text-[12px] leading-relaxed text-slate-700">
+                  <p className="font-semibold text-slate-900">访客暂不计入体检官排行榜</p>
+                  <p>当前已累计 {guestPoints ?? 0} 分，设个昵称即可入榜并永久保存勋章。</p>
+                </div>
+                <button
+                  onClick={() => openAuth('upgrade')}
+                  className="shrink-0 rounded-xl bg-brand px-3 py-1.5 text-[12px] font-semibold text-white shadow-xs active:bg-brand-dark"
+                >
+                  去入榜
+                </button>
+              </div>
+            )}
             {data && data.cities.length > 0 && (
               <select
                 value={city}

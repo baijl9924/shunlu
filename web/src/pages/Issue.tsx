@@ -20,7 +20,7 @@ const UPDATE_TEXT: Record<IssueDetail['updates'][number]['type'], string> = {
 export default function IssuePage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { loggedIn, openAuth, toast } = useApp();
+  const { loggedIn, isGuest, ensureSession, openAuth, toast } = useApp();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,17 +34,10 @@ export default function IssuePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, loggedIn]);
-
-  function requireLogin() {
-    if (loggedIn) return true;
-    toast('请先登录后再操作');
-    openAuth('login');
-    return false;
-  }
+  }, [id, loggedIn, isGuest]);
 
   async function confirm() {
-    if (!requireLogin()) return;
+    if (!(await ensureSession())) return;
     try {
       await api(`/api/issues/${id}/confirm`, { method: 'POST' });
       toast('感谢确认，这会让问题更受重视');
@@ -55,7 +48,7 @@ export default function IssuePage() {
   }
 
   async function addUpdate(type: 'reported' | 'fixed' | 'recheck', photo?: Blob) {
-    if (!requireLogin()) return;
+    if (!(await ensureSession())) return;
     setBusy(true);
     try {
       const fd = new FormData();
@@ -133,8 +126,10 @@ export default function IssuePage() {
           <div className="flex items-center gap-2">
             <StatusBadge status={issue.status} />
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">{SEVERITY_TEXT[issue.severity]}</span>
-            <span className="ml-auto text-[12px] text-slate-400">
-              {issue.nickname} · {timeAgo(issue.createdAt)}
+            <span className="ml-auto inline-flex items-center gap-1 text-[12px] text-slate-400">
+              <span>{issue.nickname}</span>
+              {issue.isGuestAuthor && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">访客</span>}
+              <span>· {timeAgo(issue.createdAt)}</span>
             </span>
           </div>
           <div className="mt-2.5 flex items-center justify-between gap-2">
@@ -172,7 +167,17 @@ export default function IssuePage() {
             <RefreshCw className="h-4 w-4 text-brand" />
             路过复查
           </h2>
-          <p className="mt-1 text-[13px] text-slate-500">再次路过时拍一张（同样自动审核并打码），满 2 位市民或原发布者确认后将正式标为「已整改」（积分 +20）</p>
+          <p className="mt-1 text-[13px] text-slate-500">
+            再次路过时拍一张（同样自动审核并打码），满 2 位正式市民或原发布者确认后将正式标为「已整改」（积分 +20）
+          </p>
+          {isGuest && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+              <span>访客可提交现场复查凭证，但不计入「2 人自动结案」权重。</span>
+              <button type="button" onClick={() => openAuth('upgrade')} className="shrink-0 font-semibold text-brand underline">
+                升级生效
+              </button>
+            </div>
+          )}
           <input
             ref={fileRef}
             type="file"
@@ -188,8 +193,8 @@ export default function IssuePage() {
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             <button
               disabled={busy || issue.status === 'fixed'}
-              onClick={() => {
-                if (!requireLogin()) return;
+              onClick={async () => {
+                if (!(await ensureSession())) return;
                 setRecheckType('fixed');
                 fileRef.current?.click();
               }}
@@ -200,8 +205,8 @@ export default function IssuePage() {
             </button>
             <button
               disabled={busy}
-              onClick={() => {
-                if (!requireLogin()) return;
+              onClick={async () => {
+                if (!(await ensureSession())) return;
                 setRecheckType('recheck');
                 fileRef.current?.click();
               }}

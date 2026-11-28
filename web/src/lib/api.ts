@@ -17,6 +17,7 @@ export type Issue = {
   hidden: boolean;
   confirmCount: number;
   nickname: string;
+  isGuestAuthor?: boolean;
   createdAt: number;
 };
 

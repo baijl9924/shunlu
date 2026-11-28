@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api, assetUrl, STATUS_TEXT, type Issue } from '../lib/api';
 
-type AdminUser = { id: string; nickname: string; role: 'user' | 'admin'; hasPassword: number; createdAt: number; issues: number };
+type AdminUser = { id: string; nickname: string; role: 'user' | 'admin'; isGuest?: number; hasPassword: number; createdAt: number; issues: number };
 
 export default function Admin() {
   const [authed, setAuthed] = useState(!!sessionStorage.getItem('shunlu.admin'));
   const [tab, setTab] = useState<'issues' | 'users'>('issues');
+  const [showGuests, setShowGuests] = useState(false);
   const [pwd, setPwd] = useState('');
   const [list, setList] = useState<Issue[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -145,39 +146,60 @@ export default function Admin() {
 
       {tab === 'users' && (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between text-[13px] text-slate-500">
+            <span>
+              正式用户 {users.filter((u) => !u.isGuest).length} 人 · 临时访客 {users.filter((u) => !!u.isGuest).length} 人
+            </span>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-slate-600">
+              <input type="checkbox" checked={showGuests} onChange={(e) => setShowGuests(e.target.checked)} className="rounded accent-brand" />
+              显示临时访客
+            </label>
+          </div>
           <table className="w-full text-[14px]">
             <thead>
               <tr className="border-b text-left text-slate-500">
-                <th className="py-2">唯一昵称</th>
-                <th>角色</th>
-                <th>密码保护</th>
-                <th>标记数</th>
-                <th>注册时间</th>
-                <th>权限操作</th>
+                <th className="whitespace-nowrap py-2 pr-3">唯一昵称</th>
+                <th className="whitespace-nowrap pr-3">身份</th>
+                <th className="whitespace-nowrap pr-3">密码保护</th>
+                <th className="whitespace-nowrap pr-3">标记数</th>
+                <th className="whitespace-nowrap pr-3">创建时间</th>
+                <th className="whitespace-nowrap">权限操作</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b">
-                  <td className="py-2.5 font-semibold text-slate-900">{u.nickname}</td>
-                  <td>
-                    <span className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${u.role === 'admin' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-600'}`}>
-                      {u.role === 'admin' ? '管理员' : '普通用户'}
-                    </span>
-                  </td>
-                  <td>{u.hasPassword ? '已设密码' : '旧版免密'}</td>
-                  <td>{u.issues}</td>
-                  <td className="text-slate-500">{new Date(u.createdAt).toLocaleString('zh-CN')}</td>
-                  <td className="space-x-2">
-                    <button onClick={() => toggleRole(u)} className="rounded-lg border border-slate-200 px-3 py-1 text-[12px] font-medium text-slate-700 hover:border-brand hover:text-brand">
-                      {u.role === 'admin' ? '取消管理员' : '设为管理员'}
-                    </button>
-                    <button onClick={() => resetPassword(u)} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[12px] font-medium text-amber-800 hover:bg-amber-100">
-                      重置密码
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {users
+                .filter((u) => showGuests || !u.isGuest)
+                .map((u) => (
+                  <tr key={u.id} className="border-b">
+                    <td className="whitespace-nowrap py-2.5 pr-3 font-semibold text-slate-900">{u.nickname}</td>
+                    <td className="whitespace-nowrap pr-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${
+                          u.isGuest ? 'bg-amber-50 text-amber-700' : u.role === 'admin' ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {u.isGuest ? '临时访客' : u.role === 'admin' ? '管理员' : '普通用户'}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap pr-3">{u.isGuest ? '访客未转正' : u.hasPassword ? '已设密码' : '旧版免密'}</td>
+                    <td className="whitespace-nowrap pr-3">{u.issues}</td>
+                    <td className="whitespace-nowrap pr-3 text-slate-500">{new Date(u.createdAt).toLocaleString('zh-CN')}</td>
+                    <td className="space-x-2 whitespace-nowrap">
+                      {u.isGuest ? (
+                        <span className="text-[12px] text-slate-400">待用户转正</span>
+                      ) : (
+                        <>
+                          <button onClick={() => toggleRole(u)} className="rounded-lg border border-slate-200 px-3 py-1 text-[12px] font-medium text-slate-700 hover:border-brand hover:text-brand">
+                            {u.role === 'admin' ? '取消管理员' : '设为管理员'}
+                          </button>
+                          <button onClick={() => resetPassword(u)} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[12px] font-medium text-amber-800 hover:bg-amber-100">
+                            重置密码
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

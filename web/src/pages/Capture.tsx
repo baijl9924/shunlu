@@ -1,9 +1,10 @@
-import { AlertCircle, Camera, CheckCircle2, ChevronLeft, FileText, Image as ImageIcon, Loader2, LocateFixed, MapPin, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, ChevronLeft, FileText, Image as ImageIcon, Loader2, LocateFixed, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
 import MapView from '../components/MapView';
 import MosaicEditor, { type MosaicHandle } from '../components/MosaicEditor';
+import ReportTextCard from '../components/ReportTextCard';
 import { api, fetchAuthedBlobUrl, SEVERITY_TEXT } from '../lib/api';
 import { appHomePath } from '../App';
 import { DEFAULT_CENTER, locate } from '../lib/geo';
@@ -11,19 +12,20 @@ import { compressImage } from '../lib/image';
 import { useApp } from '../lib/store';
 
 type Analysis = { category: string; severity: number; title: string; description: string; department: string; channel: string };
-type Step = 'pick' | 'analyzing' | 'rejected' | 'confirm' | 'submitting' | 'done';
+type Step = 'pick' | 'analyzing' | 'rejected' | 'confirm' | 'submitting' | 'done' | 'demoDone';
 type Pos = { lat: number; lng: number };
 
 const HINTS = ['盲道被占用', '缺少坡道或坡道损坏', '台阶没有扶手', '无障碍电梯故障', '无障碍停车位被占'];
 
 export default function Capture() {
-  const { config, loggedIn, openAuth, userGeo, refreshGeo, toast } = useApp();
+  const { config, isGuest, ensureSession, openAuth, userGeo, refreshGeo, toast } = useApp();
   const nav = useNavigate();
   const [step, setStep] = useState<Step>('pick');
   const [preview, setPreview] = useState('');
   const [reason, setReason] = useState('');
-  const [draft, setDraft] = useState<{ id: string; photo: string; blurredCount: number } | null>(null);
+  const [draft, setDraft] = useState<{ id: string; photo: string; blurredCount: number; isDemo: boolean } | null>(null);
   const [form, setForm] = useState<Analysis | null>(null);
+  const [demoReport, setDemoReport] = useState<{ reportText: string; channel: string; department: string } | null>(null);
   const [pos, setPos] = useState<Pos | null>(() => (userGeo ? { lat: userGeo.lat, lng: userGeo.lng } : null));
   const [locError, setLocError] = useState('');
   const [geo, setGeo] = useState({ address: userGeo?.address || '', city: userGeo?.city || '', district: userGeo?.district || '' });
@@ -50,14 +52,17 @@ export default function Capture() {
     return () => window.clearTimeout(t);
   }, [pos?.lat, pos?.lng]);
 
-  async function onFile(file?: File) {
+  async function onFile(file?: File, isDemo = false) {
     if (!file) return;
+    const ready = await ensureSession();
+    if (!ready) return;
     setPreview(URL.createObjectURL(file));
     setStep('analyzing');
     try {
       const blob = await compressImage(file);
       const fd = new FormData();
       fd.append('image', blob, 'photo.jpg');
+      if (isDemo) fd.append('demo', '1');
       const r = await api('/api/analyze', { method: 'POST', body: fd });
       if (!r.accept) {
         setReason(r.reason);
@@ -65,8 +70,9 @@ export default function Capture() {
         return;
       }
       const blobUrl = await fetchAuthedBlobUrl(r.photo);
-      setDraft({ id: r.draftId, photo: blobUrl, blurredCount: r.blurredCount });
+      setDraft({ id: r.draftId, photo: blobUrl, blurredCount: r.blurredCount, isDemo: !!r.isDemo });
       setForm(r.analysis);
+      setDemoReport(null);
       setStep('confirm');
     } catch (e) {
       toast((e as Error).message);
@@ -74,8 +80,47 @@ export default function Capture() {
     }
   }
 
+  async function runDemoSample() {
+    try {
+      const res = await fetch('/demo-barrier.jpg');
+      if (!res.ok) throw new Error('示例图片加载失败');
+      const blob = await res.blob();
+      const file = new File([blob], 'demo-barrier.jpg', { type: 'image/jpeg' });
+      await onFile(file, true);
+    } catch (e) {
+      toast((e as Error).message || '示例图加载失败');
+    }
+  }
+
+  async function previewDemoReport() {
+    if (!draft || !form) return;
+    setStep('submitting');
+    try {
+      const r = await api<{ reportText: string; channel: string; department: string }>(`/api/drafts/${draft.id}/preview-report`, {
+        method: 'POST',
+        json: {
+          category: form.category,
+          severity: form.severity,
+          title: form.title,
+          description: form.description,
+          address: geo.address || '示范路段人行道盲道处',
+        },
+      });
+      setDemoReport(r);
+      setStep('demoDone');
+    } catch (e) {
+      toast((e as Error).message);
+      setStep('confirm');
+    }
+  }
+
   async function submit() {
-    if (!draft || !form || !pos) return;
+    if (!draft || !form) return;
+    if (draft.isDemo) {
+      await previewDemoReport();
+      return;
+    }
+    if (!pos) return;
     setStep('submitting');
     try {
       const fd = new FormData();
@@ -115,8 +160,29 @@ export default function Capture() {
         </div>
       </header>
 
-      <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files?.[0])} />
-      <input ref={albumInput} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+      <input
+        ref={cameraInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          onFile(f, false);
+        }}
+      />
+      <input
+        ref={albumInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          onFile(f, false);
+        }}
+      />
 
       {step === 'pick' && (
         <div className="p-4">
@@ -128,7 +194,7 @@ export default function Capture() {
             <div className="relative z-10 flex justify-center">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] text-white/85 backdrop-blur-sm">
                 <ShieldCheck className="h-3.5 w-3.5 text-sky-300" />
-                自动识别问题并打码人脸、车牌
+                免注册即拍 · 自动识别并打码人脸与车牌
               </span>
             </div>
 
@@ -151,7 +217,7 @@ export default function Capture() {
             <div className="relative z-10 grid grid-cols-3 items-center pt-1">
               <div className="flex justify-center">
                 <button
-                  onClick={() => (loggedIn ? albumInput.current?.click() : (toast('请先登录或注册账号后再上报'), openAuth('register')))}
+                  onClick={() => albumInput.current?.click()}
                   className="flex flex-col items-center gap-1.5 transition active:scale-90"
                   aria-label="从相册选取照片"
                 >
@@ -164,7 +230,7 @@ export default function Capture() {
 
               <div className="flex justify-center">
                 <button
-                  onClick={() => (loggedIn ? cameraInput.current?.click() : (toast('请先登录或注册账号后再上报'), openAuth('register')))}
+                  onClick={() => cameraInput.current?.click()}
                   className="grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/85 p-1.5 shadow-xl transition duration-150 active:scale-90"
                   aria-label="打开相机拍照"
                 >
@@ -196,8 +262,24 @@ export default function Capture() {
             </div>
           </div>
 
+          {/* 零门槛示例图 AI 试玩入口（仅预览，不写入公共地图） */}
+          <button
+            type="button"
+            onClick={runDemoSample}
+            className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-brand/20 bg-white p-3.5 text-left shadow-xs transition hover:border-brand/40 active:scale-[0.99]"
+          >
+            <img src="/demo-barrier.jpg" alt="示例路障照片" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1 text-[14px] font-semibold text-slate-900">
+                <Sparkles className="h-4 w-4 shrink-0 text-brand" />
+                没有现成照片？用示例图试玩 AI 识别
+              </p>
+              <p className="mt-0.5 text-[12px] text-slate-500">一键体验自动识别、人脸车牌打码与 12345 文本（仅预览不入图）</p>
+            </div>
+          </button>
+
           {/* 常见场景轻量提示 */}
-          <div className="mt-5">
+          <div className="mt-4">
             <p className="mb-2.5 px-1 text-[12px] font-medium text-slate-500">常见可记录场景</p>
             <div className="flex flex-wrap gap-2">
               {HINTS.map((h) => (
@@ -248,6 +330,14 @@ export default function Capture() {
 
       {(step === 'confirm' || step === 'submitting') && draft && form && (
         <div className="page-enter space-y-3.5 p-4">
+          {draft.isDemo && (
+            <div className="flex items-start gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-[12px] leading-relaxed text-sky-800">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+              <p>
+                <b>示例图试玩模式：</b>当前已由 AI 真实完成识别与人脸/车牌自动打码，继续点击下方按钮可预览生成的 12345 反映文本，<b>不会写入公共地图</b>。
+              </p>
+            </div>
+          )}
           <section className="rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-xs">
             <div className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-emerald-700">
               <ShieldCheck className="h-4 w-4 shrink-0" />
@@ -335,15 +425,65 @@ export default function Capture() {
             {locError && <p className="mt-1 text-[12px] text-amber-600">{locError}</p>}
           </section>
 
-          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-slate-200/80 bg-white/95 px-3.5 pt-3.5 backdrop-blur-md [--sb-pad:0.875rem]">
+          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-slate-200/80 bg-white/95 px-3.5 pt-3 backdrop-blur-md [--sb-pad:0.875rem]">
+            {!draft.isDemo && isGuest && (
+              <p className="mb-2 text-center text-[11px] text-slate-500">当前为访客体验（每日限发布 3 条真实标记），发布后可随时设昵称转正入榜</p>
+            )}
             <button
               onClick={submit}
-              disabled={step === 'submitting' || !pos}
+              disabled={step === 'submitting' || (!draft.isDemo && !pos)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-[16px] font-semibold text-white shadow-sm shadow-brand/25 transition active:scale-[0.98] active:bg-brand-dark disabled:opacity-60"
             >
               {step === 'submitting' && <Loader2 className="h-4 w-4 animate-spin" />}
-              {step === 'submitting' ? '正在提交…' : '提交，标到地图上'}
+              {step === 'submitting'
+                ? draft.isDemo
+                  ? '正在生成 12345 文本预览…'
+                  : '正在提交…'
+                : draft.isDemo
+                  ? '生成 12345 反映文本预览'
+                  : '提交，标到地图上'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'demoDone' && draft && demoReport && (
+        <div className="page-enter space-y-3.5 p-4">
+          <section className="rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-xs">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[13px] font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                {draft.blurredCount > 0 ? `示例图已自动打码 ${draft.blurredCount} 处隐私` : '示例图已完成 AI 隐私核验'}
+              </span>
+              <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand">试玩预览</span>
+            </div>
+            <img src={draft.photo} alt="示例图打码效果" className="max-h-56 w-full rounded-xl bg-slate-950 object-contain" />
+          </section>
+
+          <ReportTextCard text={demoReport.reportText} channel={demoReport.channel} previewMode />
+
+          <div className="space-y-2.5 pt-1">
+            <button
+              onClick={() => {
+                setStep('pick');
+                setDraft(null);
+                setForm(null);
+                setDemoReport(null);
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3.5 text-[15px] font-semibold text-white shadow-sm shadow-brand/25 transition active:scale-[0.98]"
+            >
+              <Camera className="h-4 w-4" />
+              拍一张真实路障试试
+            </button>
+            {isGuest && (
+              <button
+                onClick={() => openAuth('upgrade')}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand/30 bg-white py-3 text-[14px] font-semibold text-brand transition active:bg-brand-soft"
+              >
+                <Sparkles className="h-4 w-4" />
+                升级正式账号，记录积分上排行榜
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -355,7 +495,9 @@ export default function Capture() {
               <CheckCircle2 className="h-9 w-9" />
             </div>
             <h2 className="mt-4 text-[20px] font-bold text-slate-900">已标记到地图</h2>
-            <span className="mt-1.5 inline-block rounded-full bg-brand-soft px-3 py-0.5 text-[12px] font-semibold text-brand">积分 +10</span>
+            <span className="mt-1.5 inline-block rounded-full bg-brand-soft px-3 py-0.5 text-[12px] font-semibold text-brand">
+              {isGuest ? '已累计 +10 公益分（访客暂不入榜）' : '积分 +10'}
+            </span>
             <p className="mt-3 text-[14px] leading-relaxed text-slate-500">这条记录已经同步到顺路地图，轮椅和视障朋友出门前就能提前看到。</p>
             <button
               onClick={() => nav(`/issue/${doneId}`, { replace: true })}
@@ -364,6 +506,15 @@ export default function Capture() {
               <FileText className="h-4 w-4" />
               查看 12345 反映文本
             </button>
+            {isGuest && (
+              <button
+                onClick={() => openAuth('upgrade')}
+                className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft/45 py-3 text-[14px] font-semibold text-brand transition active:scale-[0.98]"
+              >
+                <Sparkles className="h-4 w-4" />
+                设个昵称转正，永久保存并入榜
+              </button>
+            )}
             <button
               onClick={() => {
                 setStep('pick');

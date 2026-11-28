@@ -18,6 +18,9 @@ const MAX_IMAGE = 12 * 1024 * 1024;
 const SESSION_TTL = 30 * 86400_000;
 const ADMIN_TTL = 24 * 3600_000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-me';
+const GUEST_ANALYZE_HOURLY = 5;
+const GUEST_DAILY_ISSUES = 3;
+const GUEST_RECHECK_HOURLY = 5;
 
 // ---------- 工具与鉴权 ----------
 function clientIp(c: Context): string {
@@ -84,7 +87,16 @@ async function readImage(v: unknown): Promise<Buffer | null> {
   return Buffer.from(await f.arrayBuffer());
 }
 
-function publicIssue(i: IssueRow & { confirm_count?: number; nickname?: string }) {
+function createGuestNickname(): string {
+  for (let i = 0; i < 12; i++) {
+    const code = String(crypto.randomInt(1000, 10000));
+    const candidate = `顺路访客_${code}`;
+    if (!db.prepare('SELECT 1 FROM users WHERE LOWER(nickname) = LOWER(?)').get(candidate)) return candidate;
+  }
+  return `顺路访客_${crypto.randomBytes(3).toString('hex')}`;
+}
+
+function publicIssue(i: IssueRow & { confirm_count?: number; nickname?: string; is_guest_author?: number }) {
   return {
     id: i.id,
     lat: i.lat,
@@ -104,12 +116,13 @@ function publicIssue(i: IssueRow & { confirm_count?: number; nickname?: string }
     hidden: !!i.hidden,
     confirmCount: i.confirm_count ?? 0,
     nickname: i.nickname ?? '',
+    isGuestAuthor: !!i.is_guest_author,
     createdAt: i.created_at,
   };
 }
 
 const ISSUE_SELECT = `
-  SELECT i.*, u.nickname,
+  SELECT i.*, u.nickname, u.is_guest AS is_guest_author,
     (SELECT COUNT(*) FROM confirmations c WHERE c.issue_id = i.id) AS confirm_count
   FROM issues i JOIN users u ON u.id = i.user_id`;
 
@@ -150,7 +163,7 @@ app.get('/api/stats', (c) => {
         (SELECT COUNT(*) FROM issues WHERE hidden = 0 AND status = 'fixed') AS fixed,
         (SELECT COUNT(*) FROM confirmations) AS confirmations,
         (SELECT COUNT(DISTINCT city) FROM issues WHERE hidden = 0 AND city <> '') AS cities,
-        (SELECT COUNT(*) FROM users) AS users`,
+        (SELECT COUNT(*) FROM users WHERE is_guest = 0) AS users`,
     )
     .get();
   return c.json(s);
@@ -184,7 +197,7 @@ app.post('/api/auth/register', async (c) => {
     return c.json({ error: '该昵称已被使用，请换一个昵称或直接登录', code: 'NICKNAME_TAKEN' }, 409);
   }
   const sessionToken = createSession(id);
-  return c.json({ id, token: sessionToken, nickname: check.value, role: 'user', hasPassword: true });
+  return c.json({ id, token: sessionToken, nickname: check.value, role: 'user', hasPassword: true, isGuest: false });
 });
 
 app.post('/api/auth/login', async (c) => {
@@ -197,13 +210,76 @@ app.post('/api/auth/login', async (c) => {
 
   const user = db.prepare('SELECT * FROM users WHERE LOWER(nickname) = LOWER(?)').get(name) as User | undefined;
   if (!user) return c.json({ error: '昵称或密码错误' }, 401);
+  if (user.is_guest) {
+    return c.json({ error: '该昵称是临时访客账号，请在原设备点击「升级正式账号」设置昵称与密码' }, 400);
+  }
   if (!user.password_hash) {
     return c.json({ error: '该昵称尚未设置密码，请在原设备的「我的」里设置密码后再跨设备登录' }, 400);
   }
   if (!verifyPassword(password, user.password_hash)) return c.json({ error: '昵称或密码错误' }, 401);
 
   const sessionToken = createSession(user.id);
-  return c.json({ id: user.id, token: sessionToken, nickname: user.nickname, role: user.role, hasPassword: true });
+  return c.json({ id: user.id, token: sessionToken, nickname: user.nickname, role: user.role, hasPassword: true, isGuest: false });
+});
+
+// 游客懒创建：免注册一键进入体验（不进排行榜，支持随时一键转正继承全部记录与积分）
+app.post('/api/auth/guest', (c) => {
+  const existing = getUser(c);
+  if (existing) {
+    return c.json({
+      id: existing.id,
+      token: c.req.header('x-user-token') || '',
+      nickname: existing.nickname,
+      role: existing.role,
+      hasPassword: !!existing.password_hash,
+      isGuest: !!existing.is_guest,
+    });
+  }
+  if (!rateLimit(`guest:${clientIp(c)}`, 20, 3600_000)) {
+    return c.json({ error: '访客创建过于频繁，请稍后再试或直接注册正式账号' }, 429);
+  }
+  const id = uid();
+  const token = newToken();
+  const nickname = createGuestNickname();
+  const t = now();
+  db.prepare('INSERT INTO users (id, token, nickname, password_hash, role, is_guest, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    id,
+    token,
+    nickname,
+    '',
+    'user',
+    1,
+    t,
+  );
+  const sessionToken = createSession(id);
+  return c.json({ id, token: sessionToken, nickname, role: 'user', hasPassword: false, isGuest: true });
+});
+
+// 游客一键转正：原地升级当前 user_id 为正式用户，完整保留已发布的标记、积分与复查记录
+app.post('/api/auth/upgrade', async (c) => {
+  const user = getUser(c);
+  if (!user) return c.json({ error: '未登录' }, 401);
+  if (!user.is_guest) return c.json({ error: '当前已是正式账号' }, 400);
+  const body = await c.req.json().catch(() => ({}));
+  const check = validNickname(body.nickname);
+  if (!check.ok) return c.json({ error: check.error }, 400);
+  const password = String(body.password || '');
+  if (password.length < 6 || password.length > 64) return c.json({ error: '请设置 6–64 位登录密码' }, 400);
+  if (!rateLimit(`reg:${clientIp(c)}`, 15, 3600_000)) return c.json({ error: '操作太频繁，请稍后再试' }, 429);
+
+  const dup = db.prepare('SELECT id FROM users WHERE LOWER(nickname) = LOWER(?) AND id <> ?').get(check.value, user.id);
+  if (dup) return c.json({ error: '该昵称已被使用，请换一个昵称或切换「已有账号登录」', code: 'NICKNAME_TAKEN' }, 409);
+
+  try {
+    db.prepare('UPDATE users SET nickname = ?, password_hash = ?, is_guest = 0 WHERE id = ?').run(
+      check.value,
+      hashPassword(password),
+      user.id,
+    );
+  } catch {
+    return c.json({ error: '该昵称已被使用，请换一个昵称', code: 'NICKNAME_TAKEN' }, 409);
+  }
+  return c.json({ id: user.id, nickname: check.value, role: user.role, hasPassword: true, isGuest: false });
 });
 
 app.post('/api/auth/logout', (c) => {
@@ -235,7 +311,7 @@ app.post('/api/users', async (c) => {
     t,
   );
   const sessionToken = createSession(id);
-  return c.json({ id, token: sessionToken, nickname: check.value, role: 'user', hasPassword: true });
+  return c.json({ id, token: sessionToken, nickname: check.value, role: 'user', hasPassword: true, isGuest: false });
 });
 
 // ---------- 个人中心与账号设置 ----------
@@ -266,17 +342,28 @@ app.get('/api/me', (c) => {
   const mine = db
     .prepare(`${ISSUE_SELECT} WHERE i.user_id = ? AND i.hidden = 0 ORDER BY i.created_at DESC LIMIT 100`)
     .all(user.id) as IssueRow[];
-  const seq = (
-    db.prepare('SELECT COUNT(*) AS n FROM users WHERE created_at < ? OR (created_at = ? AND id <= ?)').get(user.created_at, user.created_at, user.id) as {
-      n: number;
-    }
-  ).n;
+  const seq = user.is_guest
+    ? 0
+    : (
+        db
+          .prepare('SELECT COUNT(*) AS n FROM users WHERE is_guest = 0 AND (created_at < ? OR (created_at = ? AND id <= ?))')
+          .get(user.created_at, user.created_at, user.id) as { n: number }
+      ).n;
+  const todayIssues = user.is_guest
+    ? (
+        db.prepare('SELECT COUNT(*) AS n FROM issues WHERE user_id = ? AND created_at > ?').get(user.id, now() - 86400_000) as {
+          n: number;
+        }
+      ).n
+    : 0;
   return c.json({
     id: user.id,
     seq,
     nickname: user.nickname,
     role: user.role,
     hasPassword: !!user.password_hash,
+    isGuest: !!user.is_guest,
+    guestQuota: user.is_guest ? { dailyIssueLimit: GUEST_DAILY_ISSUES, todayIssues, analyzeHourlyLimit: GUEST_ANALYZE_HOURLY } : null,
     stats,
     level: levelOf(stats.points),
     badges,
@@ -287,6 +374,7 @@ app.get('/api/me', (c) => {
 app.patch('/api/me', async (c) => {
   const user = getUser(c);
   if (!user) return c.json({ error: '未登录' }, 401);
+  if (user.is_guest) return c.json({ error: '访客账号请通过「升级正式账号」同时设置昵称和密码' }, 403);
   const { nickname } = await c.req.json().catch(() => ({}));
   const check = validNickname(nickname);
   if (!check.ok) return c.json({ error: check.error }, 400);
@@ -299,6 +387,7 @@ app.patch('/api/me', async (c) => {
 app.post('/api/me/password', async (c) => {
   const user = getUser(c);
   if (!user) return c.json({ error: '未登录' }, 401);
+  if (user.is_guest) return c.json({ error: '访客账号请通过「升级正式账号」同时设置昵称和密码' }, 403);
   const { oldPassword, newPassword } = await c.req.json().catch(() => ({}));
   const next = String(newPassword || '');
   if (next.length < 6 || next.length > 64) return c.json({ error: '新密码需为 6–64 位' }, 400);
@@ -318,13 +407,22 @@ app.get('/api/geocode', async (c) => {
   return c.json(await reverseGeocode(lat, lng));
 });
 
-// ---------- AI 识别（生成私有草稿） ----------
+// ---------- AI 识别（生成私有草稿；支持访客限流体验与示例图试玩预览） ----------
 app.post('/api/analyze', async (c) => {
   const user = getUser(c);
-  if (!user) return c.json({ error: '请先登录后再上传照片' }, 401);
-  if (!rateLimit(`analyze:${user.id}`, 30, 3600_000)) return c.json({ error: '识别次数太多，请一小时后再试' }, 429);
+  if (!user) return c.json({ error: '请先登录或开启游客体验后再上传照片' }, 401);
+  if (user.is_guest) {
+    const okUser = rateLimit(`analyze:guest:u:${user.id}`, GUEST_ANALYZE_HOURLY, 3600_000);
+    const okIp = rateLimit(`analyze:guest:ip:${clientIp(c)}`, 15, 3600_000);
+    if (!okUser || !okIp) {
+      return c.json({ error: `访客每小时最多可体验 ${GUEST_ANALYZE_HOURLY} 次 AI 识别，升级正式账号可享更高额度` }, 429);
+    }
+  } else if (!rateLimit(`analyze:${user.id}`, 30, 3600_000)) {
+    return c.json({ error: '识别次数太多，请一小时后再试' }, 429);
+  }
   try {
     const body = await c.req.parseBody();
+    const isDemo = body.demo === '1' || body.demo === 'true' ? 1 : 0;
     const raw = await readImage(body.image);
     if (!raw) return c.json({ error: '请上传照片' }, 400);
     const img = await normalize(raw);
@@ -345,16 +443,18 @@ app.post('/api/analyze', async (c) => {
     const blurred = await pixelate(img.buf, regions);
     const photo = saveImage(blurred, 'drafts');
     const id = uid();
-    db.prepare('INSERT INTO drafts (id, user_id, analysis, photo, created_at) VALUES (?, ?, ?, ?, ?)').run(
+    db.prepare('INSERT INTO drafts (id, user_id, analysis, photo, is_demo, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
       id,
       user.id,
       JSON.stringify(analysis),
       photo,
+      isDemo,
       now(),
     );
     return c.json({
       accept: true,
       draftId: id,
+      isDemo: !!isDemo,
       photo: `/api/drafts/${id}/photo`,
       blurredCount: regions.length,
       analysis: {
@@ -386,16 +486,63 @@ app.get('/api/drafts/:id/photo', (c) => {
   return new Response(fs.readFileSync(full), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=300' } });
 });
 
-// ---------- 问题点（含所有权与角色权限校验） ----------
+// 草稿 12345 反映文本预览（用于示例图试玩：完整体验 AI 文书生成，不写入公共地图）
+app.post('/api/drafts/:id/preview-report', async (c) => {
+  const user = getUser(c);
+  if (!user) return c.json({ error: '请先登录' }, 401);
+  if (!rateLimit(`preview:${user.id}`, user.is_guest ? 10 : 30, 3600_000)) {
+    return c.json({ error: '生成预览太频繁，请稍后再试' }, 429);
+  }
+  const draft = db.prepare('SELECT * FROM drafts WHERE id = ?').get(c.req.param('id')) as
+    | { id: string; user_id: string; analysis: string; is_demo: number }
+    | undefined;
+  if (!draft) return c.json({ error: '草稿不存在或已过期' }, 404);
+  if (draft.user_id !== user.id && user.role !== 'admin') return c.json({ error: '无权访问他人草稿' }, 403);
+  const a = JSON.parse(draft.analysis) as Analysis;
+  const body = await c.req.json().catch(() => ({}));
+  const category = CATEGORIES.includes(body.category) ? String(body.category) : a.category;
+  const severity = [1, 2, 3].includes(Number(body.severity)) ? Number(body.severity) : a.severity;
+  const title = String(body.title || a.title).trim().slice(0, 20) || a.title;
+  const description = String(body.description || a.description).trim().slice(0, 200);
+  const address = String(body.address || '').trim().slice(0, 120) || '示范路段人行道盲道处';
+  const reportText = await generateReport({
+    category,
+    title,
+    description,
+    address,
+    department: a.department,
+    channel: a.channel,
+    severity,
+    time: new Date(),
+  });
+  return c.json({ reportText, channel: a.channel, department: a.department, isDemo: !!draft.is_demo });
+});
+
+// ---------- 问题点（含所有权、角色权限与访客每日发布配额校验） ----------
 app.post('/api/issues', async (c) => {
   const user = getUser(c);
   if (!user) return c.json({ error: '请先登录' }, 401);
-  if (!rateLimit(`issue:${user.id}`, 20, 3600_000)) return c.json({ error: '提交过于频繁，请稍后再试' }, 429);
+  if (user.is_guest) {
+    const todayCount = (
+      db.prepare('SELECT COUNT(*) AS n FROM issues WHERE user_id = ? AND created_at > ?').get(user.id, now() - 86400_000) as {
+        n: number;
+      }
+    ).n;
+    if (todayCount >= GUEST_DAILY_ISSUES) {
+      return c.json({ error: `访客每日最多可发布 ${GUEST_DAILY_ISSUES} 条路障标记，升级正式账号即可解除限制并入榜` }, 429);
+    }
+    if (!rateLimit(`issue:guest:ip:${clientIp(c)}`, 12, 86400_000)) {
+      return c.json({ error: '当前网络今日访客发布已达上限，请注册或登录正式账号' }, 429);
+    }
+  } else if (!rateLimit(`issue:${user.id}`, 20, 3600_000)) {
+    return c.json({ error: '提交过于频繁，请稍后再试' }, 429);
+  }
   const body = await c.req.parseBody();
   const draft = db.prepare('SELECT * FROM drafts WHERE id = ? AND user_id = ?').get(String(body.draftId), user.id) as
-    | { id: string; analysis: string; photo: string }
+    | { id: string; analysis: string; photo: string; is_demo: number }
     | undefined;
   if (!draft) return c.json({ error: '草稿不存在、无权限或已提交' }, 400);
+  if (draft.is_demo) return c.json({ error: '示例图试玩仅用于预览体验，不会写入公共地图' }, 400);
   const a = JSON.parse(draft.analysis) as Analysis;
 
   const lat = Number(body.lat);
@@ -517,6 +664,9 @@ app.delete('/api/issues/:id', (c) => {
 app.post('/api/issues/:id/confirm', (c) => {
   const user = getUser(c);
   if (!user) return c.json({ error: '请先登录' }, 401);
+  if (user.is_guest && !rateLimit(`confirm:guest:${clientIp(c)}`, 30, 3600_000)) {
+    return c.json({ error: '操作太频繁，请稍后再试' }, 429);
+  }
   const row = db.prepare('SELECT user_id FROM issues WHERE id = ? AND hidden = 0').get(c.req.param('id')) as
     | { user_id: string }
     | undefined;
@@ -543,6 +693,9 @@ app.post('/api/issues/:id/updates', async (c) => {
     if (db.prepare("SELECT 1 FROM updates WHERE issue_id = ? AND user_id = ? AND type = 'reported'").get(issue.id, user.id))
       return c.json({ error: '你已经标记过“已反映”' }, 400);
   } else {
+    if (user.is_guest && !rateLimit(`recheck:guest:${user.id}`, GUEST_RECHECK_HOURLY, 3600_000)) {
+      return c.json({ error: `访客每小时最多可提交 ${GUEST_RECHECK_HOURLY} 次复查，升级正式账号可享更高额度` }, 429);
+    }
     // 防刷分：同一用户 24 小时内对同一问题最多提交 1 次复查
     const recent = db
       .prepare("SELECT 1 FROM updates WHERE issue_id = ? AND user_id = ? AND type IN ('fixed','fixed_claim','recheck') AND created_at > ?")
@@ -566,27 +719,44 @@ app.post('/api/issues/:id/updates', async (c) => {
     photo = saveImage(blurred, 'updates');
   }
 
-  // 权限防恶意篡改：仅原发布者、管理员，或满 2 位不同市民先后拍图确认后，才将状态正式置为「已整改」
+  // 权限防恶意篡改：仅正式账号的原发布者、管理员，或满 2 位不同正式市民先后拍图确认后，才将状态置为「已整改」
+  // 访客可提交复查记录，但不计入「2 人自动结案」权重
   let storedType = type;
   let nextStatus = issue.status;
-  let message = type === 'reported' ? '已记录，积分 +5' : '感谢复查，积分 +20';
+  let message =
+    type === 'reported'
+      ? user.is_guest
+        ? '已记录反映进度（已累计 +5 公益分，升级正式账号后入榜并永久保存）'
+        : '已记录，积分 +5'
+      : user.is_guest
+        ? '已记录现场复查（已累计 +20 公益分，升级正式账号后永久保存）'
+        : '感谢复查，积分 +20';
 
   if (type === 'reported') {
     if (issue.status === 'pending') nextStatus = 'reported';
   } else if (type === 'fixed') {
-    const isOwnerOrAdmin = issue.user_id === user.id || user.role === 'admin' || isAdmin(c);
-    const priorClaims = (
-      db
-        .prepare("SELECT COUNT(DISTINCT user_id) AS n FROM updates WHERE issue_id = ? AND type IN ('fixed','fixed_claim') AND user_id <> ?")
-        .get(issue.id, user.id) as { n: number }
-    ).n;
-    if (isOwnerOrAdmin || priorClaims >= 1) {
-      storedType = 'fixed';
-      nextStatus = 'fixed';
-      message = '已核实整改完成，积分 +20';
-    } else {
+    if (user.is_guest) {
       storedType = 'fixed_claim';
-      message = '已记录整改复查凭证（积分 +20），再有 1 位市民或发布者确认后将正式标为「已整改」';
+      message = '已记录整改复查凭证！访客暂不计入自动结案权重，升级正式账号后即可参与结案确认';
+    } else {
+      const isOwnerOrAdmin = issue.user_id === user.id || user.role === 'admin' || isAdmin(c);
+      const priorClaims = (
+        db
+          .prepare(
+            `SELECT COUNT(DISTINCT up.user_id) AS n
+             FROM updates up JOIN users u ON u.id = up.user_id
+             WHERE up.issue_id = ? AND up.type IN ('fixed','fixed_claim') AND up.user_id <> ? AND u.is_guest = 0`,
+          )
+          .get(issue.id, user.id) as { n: number }
+      ).n;
+      if (isOwnerOrAdmin || priorClaims >= 1) {
+        storedType = 'fixed';
+        nextStatus = 'fixed';
+        message = '已核实整改完成，积分 +20';
+      } else {
+        storedType = 'fixed_claim';
+        message = '已记录整改复查凭证（积分 +20），再有 1 位正式市民或发布者确认后将正式标为「已整改」';
+      }
     }
   }
 
@@ -606,7 +776,7 @@ app.post('/api/issues/:id/updates', async (c) => {
   return c.json({ ok: true, status: nextStatus, message });
 });
 
-// ---------- 排行 ----------
+// ---------- 排行（仅统计正式注册体检官，访客不计入排行榜） ----------
 app.get('/api/leaderboard', (c) => {
   const city = c.req.query('city');
   const users = db
@@ -614,7 +784,8 @@ app.get('/api/leaderboard', (c) => {
       `SELECT u.id, u.nickname, ${POINTS_SQL} AS points,
         (SELECT COUNT(*) FROM issues i WHERE i.user_id = u.id AND i.hidden = 0 ${city ? 'AND i.city = @city' : ''}) AS issues
        FROM users u
-       ${city ? 'WHERE EXISTS (SELECT 1 FROM issues i WHERE i.user_id = u.id AND i.city = @city AND i.hidden = 0)' : ''}
+       WHERE u.is_guest = 0
+       ${city ? 'AND EXISTS (SELECT 1 FROM issues i WHERE i.user_id = u.id AND i.city = @city AND i.hidden = 0)' : ''}
        ORDER BY points DESC LIMIT 50`,
     )
     .all(city ? { city } : {});
@@ -694,7 +865,7 @@ app.get('/api/admin/users', (c) => {
   if (!isAdmin(c)) return c.json({ error: '无权限' }, 401);
   const rows = db
     .prepare(
-      `SELECT u.id, u.nickname, u.role, (u.password_hash <> '') AS hasPassword, u.created_at AS createdAt,
+      `SELECT u.id, u.nickname, u.role, u.is_guest AS isGuest, (u.password_hash <> '') AS hasPassword, u.created_at AS createdAt,
         (SELECT COUNT(*) FROM issues i WHERE i.user_id = u.id AND i.hidden = 0) AS issues
        FROM users u ORDER BY u.created_at DESC LIMIT 200`,
     )
@@ -704,6 +875,9 @@ app.get('/api/admin/users', (c) => {
 
 app.patch('/api/admin/users/:id', async (c) => {
   if (!isAdmin(c)) return c.json({ error: '无权限' }, 401);
+  const target = db.prepare('SELECT is_guest FROM users WHERE id = ?').get(c.req.param('id')) as { is_guest: number } | undefined;
+  if (!target) return c.json({ error: '用户不存在' }, 404);
+  if (target.is_guest) return c.json({ error: '临时访客账号不能设为管理员' }, 400);
   const body = await c.req.json().catch(() => ({}));
   if (body.role === 'admin' || body.role === 'user') {
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(body.role, c.req.param('id'));
@@ -716,8 +890,9 @@ app.post('/api/admin/users/:id/reset-password', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const next = String(body.newPassword || '').trim();
   if (next.length < 6 || next.length > 64) return c.json({ error: '新密码需为 6–64 位' }, 400);
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(c.req.param('id'));
+  const user = db.prepare('SELECT id, is_guest FROM users WHERE id = ?').get(c.req.param('id')) as { id: string; is_guest: number } | undefined;
   if (!user) return c.json({ error: '用户不存在' }, 404);
+  if (user.is_guest) return c.json({ error: '临时访客账号无需重置密码' }, 400);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(next), c.req.param('id'));
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(c.req.param('id'));
   return c.json({ ok: true });
@@ -733,7 +908,7 @@ if (fs.existsSync(WEB_DIST)) {
   app.get('*', serveStatic({ root, path: 'index.html' }));
 }
 
-// 定时清理过期草稿与过期会话
+// 定时清理过期草稿、过期会话、限流桶与超期无活跃记录的僵尸游客
 setInterval(() => {
   const t = now();
   const old = db.prepare('SELECT id, photo FROM drafts WHERE created_at < ?').all(t - 86400_000) as { id: string; photo: string }[];
@@ -743,6 +918,16 @@ setInterval(() => {
   }
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(t);
   db.prepare('DELETE FROM admin_sessions WHERE expires_at < ?').run(t);
+  db.prepare(
+    `DELETE FROM users
+     WHERE is_guest = 1 AND created_at < ?
+       AND NOT EXISTS (SELECT 1 FROM issues i WHERE i.user_id = users.id)
+       AND NOT EXISTS (SELECT 1 FROM confirmations c WHERE c.user_id = users.id)
+       AND NOT EXISTS (SELECT 1 FROM updates up WHERE up.user_id = users.id)`,
+  ).run(t - 7 * 86400_000);
+  for (const [k, b] of buckets.entries()) {
+    if (b.reset < t) buckets.delete(k);
+  }
 }, 3600_000).unref();
 
 const port = Number(process.env.PORT || 8787);

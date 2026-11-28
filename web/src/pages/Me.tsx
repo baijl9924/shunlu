@@ -1,4 +1,4 @@
-import { Award, Compass, Eye, Handshake, KeyRound, LogIn, LogOut, Megaphone, Pencil, RefreshCw, Search, Share2, ShieldAlert, Wrench } from 'lucide-react';
+import { Award, Compass, Eye, Handshake, KeyRound, Lock, LogIn, LogOut, Megaphone, Pencil, RefreshCw, Search, Share2, ShieldAlert, Sparkles, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import IssueCard from '../components/IssueCard';
 import Poster from '../components/Poster';
@@ -11,6 +11,8 @@ type MeData = {
   nickname: string;
   role: 'user' | 'admin';
   hasPassword: boolean;
+  isGuest: boolean;
+  guestQuota: { dailyIssueLimit: number; todayIssues: number; analyzeHourlyLimit: number } | null;
   stats: { points: number; issues: number; fixed: number; confirmed: number; helped: number; rechecks: number; cities: number };
   level: { name: string; index: number; next: { name: string; need: number } | null };
   badges: { id: string; name: string; desc: string; got: boolean }[];
@@ -28,7 +30,7 @@ const BADGE_ICON: Record<string, React.ComponentType<{ className?: string }>> = 
 };
 
 export default function Me() {
-  const { loggedIn, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile, largeText, toggleLargeText } = useApp();
+  const { loggedIn, isGuest, enterAsGuest, openAuth, logout, toast, setNickname, markHasPassword, profile, saveProfile, largeText, toggleLargeText } = useApp();
   const [me, setMe] = useState<MeData | null>(null);
   const [poster, setPoster] = useState(false);
   const [editName, setEditName] = useState(false);
@@ -43,30 +45,61 @@ export default function Me() {
     if (loggedIn) load();
     else setMe(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedIn]);
+  }, [loggedIn, isGuest]);
 
   if (!loggedIn) {
     return (
       <div className="safe-top flex min-h-full flex-col items-center justify-center bg-surface p-6 text-center [--st-pad:2rem]">
         <img src="/logo.svg" width={64} height={64} alt="" className="rounded-2xl shadow-md" />
-        <h1 className="mt-4 text-[20px] font-bold text-slate-900">登录顺路账号</h1>
+        <h1 className="mt-4 text-[20px] font-bold text-slate-900">开始无障碍顺路体检</h1>
         <p className="mt-1.5 max-w-xs text-[14px] leading-relaxed text-slate-500">
-          登录后可记录路障、查看个人积分与勋章、跨设备同步你的所有标记。
+          免注册即可游客体验 AI 识别、打码与 12345 文本；登录正式账号可参与排行榜、解锁成就勋章并跨设备同步。
         </p>
         <div className="mt-6 flex w-full max-w-xs flex-col gap-2.5">
           <button
-            onClick={() => openAuth('login')}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-[15px] font-semibold text-white shadow-sm shadow-brand/25"
+            onClick={async () => {
+              const ok = await enterAsGuest();
+              if (ok) toast('已开启免注册游客体验，随时可升级正式账号');
+            }}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-[15px] font-semibold text-white shadow-sm shadow-brand/25 active:bg-brand-dark"
           >
-            <LogIn className="h-4 w-4" />
-            已有账号登录
+            <Compass className="h-4 w-4" />
+            一键游客体验（免注册）
           </button>
-          <button
-            onClick={() => openAuth('register')}
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 text-[15px] font-semibold text-slate-700"
-          >
-            注册新账号
-          </button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() => openAuth('login')}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[14px] font-semibold text-slate-700"
+            >
+              <LogIn className="h-4 w-4 text-brand" />
+              账号登录
+            </button>
+            <button
+              onClick={() => openAuth('register')}
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-[14px] font-semibold text-slate-700"
+            >
+              注册新账号
+            </button>
+          </div>
+        </div>
+        <div className="mt-6 w-full max-w-xs rounded-2xl border border-slate-200/70 bg-white p-3.5 text-left shadow-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[14px] font-semibold text-slate-900">无障碍大字关怀模式</p>
+              <p className="text-[11px] text-slate-500">放大全站文字与按钮，方便长辈和弱视朋友</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={largeText}
+              onClick={() => (toggleLargeText(), toast(largeText ? '已恢复标准字号' : '已开启大字关怀模式'))}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${largeText ? 'bg-brand' : 'bg-slate-200'}`}
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-xs transition-transform duration-200 ${largeText ? 'translate-x-5' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -75,6 +108,7 @@ export default function Me() {
   if (!me) return <div className="safe-top p-10 text-center text-slate-400">加载中…</div>;
   const { stats, level } = me;
   const progress = level.next ? Math.min(100, Math.round((stats.points / (stats.points + level.next.need)) * 100)) : 100;
+  const earnedBadgeCount = me.badges.filter((b) => b.got).length;
 
   async function savePwd(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +129,7 @@ export default function Me() {
   return (
     <div className="min-h-full bg-surface pb-14">
       <section className="safe-top bg-gradient-to-br from-brand to-brand-dark px-5 pb-16 text-white [--st-pad:1.5rem]">
-        {editName ? (
+        {editName && !me.isGuest ? (
           <form
             className="flex gap-2"
             onSubmit={async (e) => {
@@ -116,40 +150,76 @@ export default function Me() {
           </form>
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <button onClick={() => setEditName(true)} className="inline-flex min-w-0 items-center gap-2 text-left">
+            <button
+              onClick={() => (me.isGuest ? openAuth('upgrade') : setEditName(true))}
+              className="inline-flex min-w-0 items-center gap-2 text-left"
+            >
               <span className="truncate text-[22px] font-bold tracking-tight">{me.nickname}</span>
               <Pencil className="h-4 w-4 shrink-0 text-white/70" />
             </button>
             <div className="flex shrink-0 items-center gap-1.5">
-              <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/95">第 {me.seq} 号体检官</span>
+              {me.isGuest ? (
+                <span className="rounded-full bg-amber-400/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-900">访客体验中</span>
+              ) : (
+                <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/95">第 {me.seq} 号体检官</span>
+              )}
               {me.role === 'admin' && <span className="rounded-full bg-amber-400/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-900">管理员</span>}
             </div>
           </div>
         )}
         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[14px] text-white/90">
           <Award className="h-4 w-4 text-amber-300" />
-          {level.name} · {stats.points} 积分
+          {me.isGuest ? `已累计 ${stats.points} 公益分（暂不入榜）` : `${level.name} · ${stats.points} 积分`}
         </p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
         </div>
-        <p className="mt-1.5 text-[12px] text-white/75">{level.next ? `再得 ${level.next.need} 积分升级为「${level.next.name}」` : '已达到最高等级，感谢同行'}</p>
+        <p className="mt-1.5 text-[12px] text-white/75">
+          {me.isGuest
+            ? '设置唯一昵称与密码即可转正，原样保留全部标记与积分并解锁排行榜'
+            : level.next
+              ? `再得 ${level.next.need} 积分升级为「${level.next.name}」`
+              : '已达到最高等级，感谢同行'}
+        </p>
       </section>
 
       <div className="-mt-11 space-y-3.5 px-4">
-        {!me.hasPassword && (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-[13px] text-amber-900">
-            <div className="flex items-start gap-2">
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        {me.isGuest ? (
+          <section className="rounded-2xl border border-brand/25 bg-white p-4 shadow-sm">
+            <div className="flex items-start gap-2.5">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                <Sparkles className="h-5 w-5" />
+              </div>
               <div className="flex-1">
-                <p className="font-semibold">建议立即设置登录密码</p>
-                <p className="mt-0.5 text-[12px] text-amber-800/90">你使用的是旧版免密账号，设置密码后即可跨设备安全找回所有记录，防止丢失。</p>
-                <button onClick={() => setPwdOpen(true)} className="mt-2 rounded-lg bg-amber-600 px-3 py-1 text-[12px] font-semibold text-white">
-                  现在设置密码
+                <p className="text-[14px] font-bold text-slate-900">当前已累计 {stats.points} 分，设个昵称即可入榜并永久保存</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+                  访客暂不计入体检官排行榜与勋章成就，今日还可发布 {Math.max(0, (me.guestQuota?.dailyIssueLimit ?? 3) - (me.guestQuota?.todayIssues ?? 0))} /{' '}
+                  {me.guestQuota?.dailyIssueLimit ?? 3} 条真实标记；升级正式账号后将完整继承全部记录并支持跨设备同步。
+                </p>
+                <button
+                  onClick={() => openAuth('upgrade')}
+                  className="mt-3 w-full rounded-xl bg-brand py-2.5 text-[14px] font-semibold text-white shadow-xs active:bg-brand-dark"
+                >
+                  升级正式账号，立即入榜保存
                 </button>
               </div>
             </div>
           </section>
+        ) : (
+          !me.hasPassword && (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-[13px] text-amber-900">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="flex-1">
+                  <p className="font-semibold">建议立即设置登录密码</p>
+                  <p className="mt-0.5 text-[12px] text-amber-800/90">你使用的是旧版免密账号，设置密码后即可跨设备安全找回所有记录，防止丢失。</p>
+                  <button onClick={() => setPwdOpen(true)} className="mt-2 rounded-lg bg-amber-600 px-3 py-1 text-[12px] font-semibold text-white">
+                    现在设置密码
+                  </button>
+                </div>
+              </div>
+            </section>
+          )
         )}
 
         <section className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 text-center shadow-xs">
@@ -163,27 +233,48 @@ export default function Me() {
             你标记的问题已获得 <b className="text-brand">{stats.confirmed}</b> 次确认，其中 <b className="text-emerald-600">{stats.fixed}</b> 处已经整改。每一次记录都在帮出行不便的朋友少走弯路。
           </p>
           <button
-            onClick={() => setPoster(true)}
+            onClick={() => {
+              if (me.isGuest) {
+                toast('升级正式账号后即可获得专属编号并生成体检官海报');
+                openAuth('upgrade');
+                return;
+              }
+              setPoster(true);
+            }}
             className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-2.5 text-[14px] font-semibold text-white active:bg-brand-dark"
           >
             <Share2 className="h-4 w-4" />
-            生成体检官分享海报
+            {me.isGuest ? '升级正式账号，领取专属分享海报' : '生成体检官分享海报'}
           </button>
         </section>
 
         <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
-          <h2 className="mb-3 text-[15px] font-semibold text-slate-900">成就勋章</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-[15px] font-semibold text-slate-900">成就勋章</h2>
+            {me.isGuest && (
+              <button onClick={() => openAuth('upgrade')} className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-semibold text-brand">
+                <Lock className="h-3 w-3" />
+                {earnedBadgeCount > 0 ? `${earnedBadgeCount} 枚待升级解锁` : '升级后解锁'}
+              </button>
+            )}
+          </div>
           <ul className="grid grid-cols-4 gap-3">
             {me.badges.map((b) => {
               const Icon = BADGE_ICON[b.id] || Award;
+              const unlocked = !me.isGuest && b.got;
               return (
-                <li key={b.id} className={`text-center ${b.got ? '' : 'opacity-40'}`} title={b.desc}>
-                  <div className={`mx-auto grid h-12 w-12 place-items-center rounded-2xl ${b.got ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-400'}`} aria-hidden>
+                <li
+                  key={b.id}
+                  onClick={() => me.isGuest && openAuth('upgrade')}
+                  className={`text-center ${unlocked ? '' : 'opacity-45'} ${me.isGuest ? 'cursor-pointer' : ''}`}
+                  title={b.desc}
+                >
+                  <div className={`mx-auto grid h-12 w-12 place-items-center rounded-2xl ${unlocked ? 'bg-brand-soft text-brand' : 'bg-slate-100 text-slate-400'}`} aria-hidden>
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className="mt-1.5 text-[11px] font-medium text-slate-700">{b.name}</p>
                   <span className="sr-only">
-                    {b.got ? '已获得' : '未获得'}：{b.desc}
+                    {unlocked ? '已获得' : '未解锁'}：{b.desc}
                   </span>
                 </li>
               );
@@ -242,26 +333,40 @@ export default function Me() {
         <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-xs">
           <h2 className="text-[15px] font-semibold text-slate-900">账号与安全</h2>
           <div className="mt-3 flex gap-2.5">
-            <button
-              onClick={() => setPwdOpen((v) => !v)}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-700"
-            >
-              <KeyRound className="h-4 w-4 text-brand" />
-              {me.hasPassword ? '修改密码' : '设置密码'}
-            </button>
+            {me.isGuest ? (
+              <button
+                onClick={() => openAuth('upgrade')}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft/50 py-2.5 text-[13px] font-semibold text-brand"
+              >
+                <Sparkles className="h-4 w-4" />
+                升级正式账号
+              </button>
+            ) : (
+              <button
+                onClick={() => setPwdOpen((v) => !v)}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-700"
+              >
+                <KeyRound className="h-4 w-4 text-brand" />
+                {me.hasPassword ? '修改密码' : '设置密码'}
+              </button>
+            )}
             <button
               onClick={async () => {
-                if (!me.hasPassword && !window.confirm('当前账号还没设置密码，退出后将无法再次登录该账号，确定退出吗？')) return;
+                if (me.isGuest) {
+                  if (!window.confirm('当前处于临时访客模式，退出后未升级的访客会话将无法找回，确定退出吗？')) return;
+                } else if (!me.hasPassword && !window.confirm('当前账号还没设置密码，退出后将无法再次登录该账号，确定退出吗？')) {
+                  return;
+                }
                 await logout();
-                toast('已退出登录');
+                toast(me.isGuest ? '已退出访客模式' : '已退出登录');
               }}
               className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50/60 py-2.5 text-[13px] font-semibold text-red-600"
             >
               <LogOut className="h-4 w-4" />
-              退出登录
+              {me.isGuest ? '退出访客' : '退出登录'}
             </button>
           </div>
-          {pwdOpen && (
+          {!me.isGuest && pwdOpen && (
             <form onSubmit={savePwd} className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3">
               {me.hasPassword && (
                 <input

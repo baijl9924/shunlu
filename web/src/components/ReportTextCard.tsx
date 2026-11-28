@@ -3,7 +3,19 @@ import { useState } from 'react';
 import { useApp } from '../lib/store';
 
 /** 反映文本卡片：用本机“举报资料卡”替换占位符，个人信息不上传 */
-export default function ReportTextCard({ text, channel, onReported, reported }: { text: string; channel: string; onReported: () => void; reported: boolean }) {
+export default function ReportTextCard({
+  text,
+  channel,
+  onReported,
+  reported,
+  previewMode = false,
+}: {
+  text: string;
+  channel: string;
+  onReported?: () => void;
+  reported?: boolean;
+  previewMode?: boolean;
+}) {
   const { profile, saveProfile, toast } = useApp();
   const [editing, setEditing] = useState(!profile.name);
   const [name, setName] = useState(profile.name);
@@ -90,14 +102,20 @@ export default function ReportTextCard({ text, channel, onReported, reported }: 
       <p className="mt-2.5 text-[12px] leading-relaxed text-slate-500">
         也可在微信搜索「{channel === '12315' ? '全国12315平台' : '12345'}」小程序提交，或通过最高检「益心为公」小程序提交公益诉讼线索。
       </p>
-      <button
-        onClick={onReported}
-        disabled={reported}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-[14px] font-semibold text-white transition active:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-500"
-      >
-        {reported && <Check className="h-4 w-4" />}
-        {reported ? '已标记为“已反映”' : '我已向相关部门反映（积分 +5）'}
-      </button>
+      {previewMode ? (
+        <p className="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-center text-[12px] font-medium text-sky-700">
+          示例图试玩预览：已完整走通 AI 识别、打码与文书生成，不会写入公共地图
+        </p>
+      ) : (
+        <button
+          onClick={onReported}
+          disabled={reported}
+          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-[14px] font-semibold text-white transition active:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-500"
+        >
+          {reported && <Check className="h-4 w-4" />}
+          {reported ? '已标记为“已反映”' : '我已向相关部门反映（积分 +5）'}
+        </button>
+      )}
     </section>
   );
 }

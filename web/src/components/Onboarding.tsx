@@ -1,11 +1,11 @@
-import { Lock, ShieldCheck, User, X } from 'lucide-react';
+import { Compass, Lock, ShieldCheck, Sparkles, User, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useApp } from '../lib/store';
+import { useApp, type AuthModalMode } from '../lib/store';
 
-/** 登录 / 注册弹窗：昵称全局唯一 + 密码保护，防止重名覆盖，支持游客先浏览 */
+/** 登录 / 注册 / 游客转正弹窗：支持一键免注册游客体验，并随时升级为正式账号保留全部记录与积分 */
 export default function Onboarding() {
-  const { authModal, closeAuth, login, register, toast } = useApp();
-  const [mode, setMode] = useState<'login' | 'register'>(authModal || 'register');
+  const { authModal, closeAuth, login, register, enterAsGuest, upgradeGuest, loggedIn, isGuest, toast } = useApp();
+  const [mode, setMode] = useState<Exclude<AuthModalMode, null>>(authModal || 'register');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
@@ -30,6 +30,8 @@ export default function Onboarding() {
 
   if (!authModal) return null;
 
+  const isUpgrade = mode === 'upgrade';
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
@@ -38,7 +40,10 @@ export default function Onboarding() {
     if (password.length < 6) return setErr('密码至少需要 6 位');
     setBusy(true);
     try {
-      if (mode === 'register') {
+      if (isUpgrade) {
+        await upgradeGuest(n, password);
+        toast(`升级成功！欢迎成为正式顺路体检官，${n}`);
+      } else if (mode === 'register') {
         await register(n, password);
         toast(`欢迎加入顺路，${n}`);
       } else {
@@ -46,8 +51,20 @@ export default function Onboarding() {
         toast(`欢迎回来，${n}`);
       }
       setPassword('');
+      setName('');
     } catch (error) {
       setErr((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startGuest() {
+    setErr('');
+    setBusy(true);
+    try {
+      const ok = await enterAsGuest();
+      if (ok) toast('已开启免注册游客体验，可直接拍照识别与生成 12345 文本');
     } finally {
       setBusy(false);
     }
@@ -71,9 +88,11 @@ export default function Onboarding() {
             <img src="/logo.svg" width={40} height={40} alt="" className="rounded-xl shadow-xs" />
             <div>
               <h1 id="auth-title" className="text-[19px] font-bold tracking-tight text-slate-900">
-                {mode === 'register' ? '注册顺路账号' : '登录顺路账号'}
+                {isUpgrade ? '升级正式体检官账号' : mode === 'register' ? '注册顺路账号' : '登录顺路账号'}
               </h1>
-              <p className="text-[12px] text-slate-500">昵称全站唯一，跨设备同步你的标记与积分</p>
+              <p className="text-[12px] text-slate-500">
+                {isUpgrade ? '保留当前全部访客标记与公益积分，解锁排行榜与勋章' : '昵称全站唯一，跨设备同步你的标记与积分'}
+              </p>
             </div>
           </div>
           <button type="button" onClick={closeAuth} className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-500" aria-label="关闭">
@@ -81,32 +100,39 @@ export default function Onboarding() {
           </button>
         </div>
 
-        {/* 滑动切换：登录 / 注册 */}
-        <div className="relative mb-4 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
-            style={{ transform: mode === 'register' ? 'translateX(0%)' : 'translateX(100%)' }}
-          />
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'register'}
-            onClick={() => (setMode('register'), setErr(''))}
-            className={`relative z-10 rounded-lg py-2 text-[14px] font-semibold transition-colors ${mode === 'register' ? 'text-brand' : 'text-slate-500'}`}
-          >
-            注册新账号
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'login'}
-            onClick={() => (setMode('login'), setErr(''))}
-            className={`relative z-10 rounded-lg py-2 text-[14px] font-semibold transition-colors ${mode === 'login' ? 'text-brand' : 'text-slate-500'}`}
-          >
-            已有账号登录
-          </button>
-        </div>
+        {isUpgrade ? (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-soft/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-slate-700">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+            <p>设好唯一昵称和密码后，你在访客模式下拍过的路障、累计的积分与复查记录将自动归属到本账号，并立即参与体检官排行。</p>
+          </div>
+        ) : (
+          /* 滑动切换：登录 / 注册 */
+          <div className="relative mb-4 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-xs transition-transform duration-200 ease-out"
+              style={{ transform: mode === 'register' ? 'translateX(0%)' : 'translateX(100%)' }}
+            />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'register'}
+              onClick={() => (setMode('register'), setErr(''))}
+              className={`relative z-10 rounded-lg py-2 text-[14px] font-semibold transition-colors ${mode === 'register' ? 'text-brand' : 'text-slate-500'}`}
+            >
+              注册新账号
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'login'}
+              onClick={() => (setMode('login'), setErr(''))}
+              className={`relative z-10 rounded-lg py-2 text-[14px] font-semibold transition-colors ${mode === 'login' ? 'text-brand' : 'text-slate-500'}`}
+            >
+              已有账号登录
+            </button>
+          </div>
+        )}
 
         <div className="space-y-3">
           <label className="block">
@@ -133,7 +159,7 @@ export default function Onboarding() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 maxLength={64}
-                placeholder={mode === 'register' ? '设置至少 6 位密码' : '输入你的登录密码'}
+                placeholder={mode === 'login' ? '输入你的登录密码' : '设置至少 6 位密码'}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-3 pl-10 pr-4 text-[15px] outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15"
               />
             </div>
@@ -143,7 +169,7 @@ export default function Onboarding() {
         {err && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-600" role="alert">
             <span>{err}</span>
-            {mode === 'register' && err.includes('已被使用') && (
+            {(mode === 'register' || isUpgrade) && err.includes('已被使用') && (
               <button type="button" onClick={() => (setMode('login'), setErr(''))} className="shrink-0 font-semibold text-brand underline">
                 去登录
               </button>
@@ -155,12 +181,34 @@ export default function Onboarding() {
           disabled={busy}
           className="mt-4 w-full rounded-xl bg-brand py-3.5 text-[15px] font-semibold text-white shadow-sm shadow-brand/25 transition active:scale-[0.98] active:bg-brand-dark disabled:opacity-60"
         >
-          {busy ? '请稍候…' : mode === 'register' ? '注册并开始使用' : '登录账号'}
+          {busy ? '请稍候…' : isUpgrade ? '确认升级并入榜保存' : mode === 'register' ? '注册并开始使用' : '登录账号'}
         </button>
+
+        {!loggedIn && !isUpgrade && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={startGuest}
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand/25 bg-brand-soft/45 py-3 text-[14px] font-semibold text-brand transition active:scale-[0.98] disabled:opacity-60"
+          >
+            <Compass className="h-4 w-4" />
+            暂不注册，一键游客体验
+          </button>
+        )}
+
+        {isUpgrade && isGuest && (
+          <button
+            type="button"
+            onClick={() => (setMode('login'), setErr(''))}
+            className="mt-2.5 w-full py-1.5 text-center text-[13px] font-medium text-slate-500 hover:text-brand"
+          >
+            已有正式账号？切换到登录
+          </button>
+        )}
 
         <p className="mt-3 flex items-center justify-center gap-1 text-[12px] text-slate-400">
           <ShieldCheck className="h-3.5 w-3.5 text-brand" />
-          密码经加密哈希存储，游客也可关闭窗口继续浏览地图与报告
+          {isUpgrade ? '密码经加密哈希存储，升级后可在任意设备找回记录' : '游客可直接体验 AI 识别、自动打码与 12345 文本，暂不计入排行榜'}
         </p>
       </form>
     </div>
